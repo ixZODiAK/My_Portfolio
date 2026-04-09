@@ -150,98 +150,65 @@
         <h2 style="color: var(--accent-green); text-align: center; margin-bottom: 30px;">🔰 لوحة تحكم الأدمن</h2>
         
         <div class="admin-tabs">
-            <button class="admin-tab" onclick="switchAdminTab('certs')">🏆 الشهادات</button>
-            <button class="admin-tab" onclick="switchAdminTab('projects')">📁 المشاريع</button>
+            <button class="admin-tab" onclick="switchAdminTab('add')">➕ إضافة مقال</button>
+            <button class="admin-tab" onclick="switchAdminTab('edit')">✏️ تعديل مقال</button>
+            <button class="admin-tab" onclick="switchAdminTab('delete')">🗑️ حذف مقال</button>
+            <button class="admin-tab" onclick="switchAdminTab('certs')">🏆 شهادات</button>
+            <button class="admin-tab" onclick="switchAdminTab('projects')">📁 مشاريع</button>
             <button class="admin-tab" onclick="switchAdminTab('machines')">🖥️ رايت اب</button>
-            <button class="admin-tab" onclick="switchAdminTab('writeups-stats')">📊 إحصائيات</button>
-            <button class="admin-tab" onclick="switchAdminTab('blog')">📝 مقالات</button>
+            <button class="admin-tab" onclick="switchAdminTab('stats')">📊 إحصائيات</button>
             <button class="admin-tab" onclick="logoutAdmin()">🚪 خروج</button>
         </div>
-
-        <!-- ==================== إدارة الشهادات ==================== -->
+        
+        <!-- نماذج الإدارة الجديدة -->
         <div class="admin-form" id="certsForm">
-            <h3 style="color: var(--accent-cyan); margin-bottom: 20px;">🏆 إضافة شهادة جديدة</h3>
-            
-            <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 15px; margin-bottom: 30px;">
-                <input type="text" class="admin-input" id="certName" placeholder="اسم الشهادة (مثال: OSCP)">
-                <input type="text" class="admin-input" id="certIssuer" placeholder="الجهة المانحة (مثال: Offensive Security)">
-                <input type="text" class="admin-input" id="certDate" placeholder="تاريخ الحصول (مثال: 2024)">
-                <input type="url" class="admin-input" id="certLink" placeholder="رابط التحقق (اختياري)">
-                <textarea class="admin-input" id="certDesc" placeholder="وصف الشهادة" rows="3"></textarea>
-                <input type="text" class="admin-input" id="certSkills" placeholder="المهارات (مفصولة بفواصل) مثال: Linux,Windows,PrivEsc">
-                
-                <!-- رفع الصورة من الجهاز -->
-                <div class="upload-area" onclick="document.getElementById('certImageInput').click()">
-                    📸 اضغط لرفع صورة الشهادة من جهازك
-                    <input type="file" id="certImageInput" accept="image/*" style="display: none;" onchange="previewAndSaveImage(this, 'certImagePreview', 'certImageData')">
-                </div>
-                <input type="hidden" id="certImageData">
-                <div id="certImagePreview" style="margin-top: 10px;"></div>
-                
-                <button class="admin-tab" onclick="addCertificate()" style="background: var(--accent-green); color: black; margin-top: 15px;">✅ إضافة شهادة</button>
-            </div>
-            
-            <h3 style="color: var(--accent-yellow); margin-bottom: 15px;">📋 الشهادات الحالية</h3>
+            <h3>🏆 إدارة الشهادات</h3>
+            <input type="text" id="certName" class="admin-input" placeholder="اسم الشهادة">
+            <input type="text" id="certIssuer" class="admin-input" placeholder="الجهة المانحة">
+            <input type="text" id="certDate" class="admin-input" placeholder="التاريخ">
+            <input type="url" id="certLink" class="admin-input" placeholder="رابط الشهادة">
+            <textarea id="certDesc" class="admin-input" placeholder="وصف الشهادة" rows="3"></textarea>
+            <button class="admin-tab" onclick="addCertificate()">➕ إضافة شهادة</button>
             <div id="certificatesList"></div>
         </div>
-
-        <!-- ==================== إدارة المشاريع ==================== -->
+        
         <div class="admin-form" id="projectsForm">
-            <h3 style="color: var(--accent-cyan); margin-bottom: 20px;">📁 إضافة مشروع جديد</h3>
-            
-            <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 15px; margin-bottom: 30px;">
-                <input type="text" class="admin-input" id="projectName" placeholder="اسم المشروع">
-                <input type="text" class="admin-input" id="projectCategory" placeholder="التصنيف (مثال: Web Security)">
-                <input type="text" class="admin-input" id="projectDate" placeholder="التاريخ (مثال: 2024)">
-                <textarea class="admin-input" id="projectDesc" placeholder="وصف المشروع" rows="3"></textarea>
-                <input type="text" class="admin-input" id="projectTech" placeholder="التقنيات (مفصولة بفواصل) مثال: Python,JavaScript">
-                <input type="url" class="admin-input" id="projectGithub" placeholder="رابط GitHub">
-                <select class="admin-select" id="projectStatus">
-                    <option value="completed">✅ مكتمل</option>
-                    <option value="in-progress">🔄 قيد التطوير</option>
-                    <option value="planned">📝 مخطط له</option>
-                </select>
-                <textarea class="admin-input" id="projectFeatures" placeholder="المميزات (كل ميزة في سطر)" rows="4"></textarea>
-                
-                <!-- رفع الصورة من الجهاز -->
-                <div class="upload-area" onclick="document.getElementById('projectImageInput').click()">
-                    📸 اضغط لرفع صورة المشروع من جهازك
-                    <input type="file" id="projectImageInput" accept="image/*" style="display: none;" onchange="previewAndSaveImage(this, 'projectImagePreview', 'projectImageData')">
-                </div>
-                <input type="hidden" id="projectImageData">
-                <div id="projectImagePreview" style="margin-top: 10px;"></div>
-                
-                <button class="admin-tab" onclick="addProject()" style="background: var(--accent-green); color: black; margin-top: 15px;">✅ إضافة مشروع</button>
-            </div>
-            
-            <h3 style="color: var(--accent-yellow); margin-bottom: 15px;">📋 المشاريع الحالية</h3>
+            <h3>📁 إدارة المشاريع</h3>
+            <input type="text" id="projectName" class="admin-input" placeholder="اسم المشروع">
+            <input type="text" id="projectCategory" class="admin-input" placeholder="التصنيف">
+            <input type="text" id="projectDate" class="admin-input" placeholder="التاريخ">
+            <textarea id="projectDesc" class="admin-input" placeholder="وصف المشروع" rows="3"></textarea>
+            <input type="text" id="projectTech" class="admin-input" placeholder="التقنيات (مفصولة بفواصل)">
+            <input type="url" id="projectGithub" class="admin-input" placeholder="رابط GitHub">
+            <button class="admin-tab" onclick="addProject()">➕ إضافة مشروع</button>
             <div id="projectsList"></div>
         </div>
-
-        <!-- ==================== إدارة رايت اب الماكينات ==================== -->
+        
         <div class="admin-form" id="machinesForm">
-            <h3 style="color: var(--accent-cyan); margin-bottom: 20px;">🖥️ إضافة رايت اب ماكينة</h3>
-            
-            <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 15px; margin-bottom: 30px;">
-                <input type="text" class="admin-input" id="machineName" placeholder="اسم الماكينة (مثال: Lame)">
-                <select class="admin-select" id="machinePlatform">
-                    <option value="HackTheBox">HackTheBox</option>
-                    <option value="TryHackMe">TryHackMe</option>
-                    <option value="PortSwigger">PortSwigger</option>
-                    <option value="VulnHub">VulnHub</option>
-                </select>
-                <select class="admin-select" id="machineDifficulty">
-                    <option value="easy">سهل</option>
-                    <option value="medium">متوسط</option>
-                    <option value="hard">صعب</option>
-                    <option value="insane">جنوني</option>
-                </select>
-                <input type="text" class="admin-input" id="machineDate" placeholder="التاريخ (مثال: 2024-01-15)">
-                <textarea class="admin-input" id="machineDesc" placeholder="وصف الماكينة" rows="3"></textarea>
-                <input type="text" class="admin-input" id="machineTags" placeholder="الوسوم (مفصولة بفواصل)">
-                <textarea class="admin-input" id="machineCommands" placeholder="الأوامر المستخدمة (كل أمر في سطر)" rows="5"></textarea>
-                <textarea class="admin-input" id="machineWalkthrough" placeholder="الشرح الكامل" rows="10"></textarea>
-                
+            <h3>🖥️ إدارة رايت اب الماكينات</h3>
+            <input type="text" id="machineName" class="admin-input" placeholder="اسم الماكينة">
+            <select id="machinePlatform" class="admin-select">
+                <option value="HackTheBox">HackTheBox</option><option value="TryHackMe">TryHackMe</option>
+                <option value="PortSwigger">PortSwigger</option><option value="VulnHub">VulnHub</option>
+            </select>
+            <select id="machineDifficulty" class="admin-select">
+                <option value="easy">سهل</option><option value="medium">متوسط</option>
+                <option value="hard">صعب</option><option value="insane">جنوني</option>
+            </select>
+            <input type="text" id="machineDate" class="admin-input" placeholder="التاريخ">
+            <textarea id="machineDesc" class="admin-input" placeholder="وصف الماكينة" rows="3"></textarea>
+            <input type="text" id="machineTags" class="admin-input" placeholder="الوسوم (مفصولة بفواصل)">
+            <textarea id="machineCommands" class="admin-input" placeholder="الأوامر" rows="5"></textarea>
+            <textarea id="machineWalkthrough" class="admin-input" placeholder="الشرح الكامل" rows="10"></textarea>
+            <button class="admin-tab" onclick="addMachineWriteup()">➕ إضافة رايت اب</button>
+            <div id="machinesList"></div>
+        </div>
+        
+        <div class="admin-form" id="statsForm">
+            <h3>📊 إحصائيات الماكينات المحلولة</h3>
+            <div id="platformStatsEditor"></div>
+            <button class="admin-tab" onclick="savePlatformStats()">💾 حفظ الإحصائيات</button>
+        </div>
                 <!-- خطوات الاختراق مع رفع الصور -->
                 <h4 style="color: var(--accent-cyan); margin: 15px 0;">📸 خطوات الاختراق (صور وفيديوهات)</h4>
                 <div id="stepsContainer"></div>
