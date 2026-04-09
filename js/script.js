@@ -525,3 +525,261 @@ window.onload = async function() {
         updateDeleteSelect();
     }
 };
+
+// ==================== إدارة الشهادات ====================
+let certificates = JSON.parse(localStorage.getItem('certificates')) || [
+    { id: 1, name: "OSCP", issuer: "Offensive Security", date: "2024", link: "https://www.offsec.com", description: "شهادة OSCP المهنية" },
+    { id: 2, name: "CEH Master", issuer: "EC-Council", date: "2024", link: "https://www.eccouncil.org", description: "شهادة الهاكر الأخلاقي" },
+    { id: 3, name: "CRTP", issuer: "Pentester Academy", date: "2024", link: "https://www.pentesteracademy.com", description: "شهادة اختبار اختراق Active Directory" }
+];
+
+let projects = JSON.parse(localStorage.getItem('projects')) || [
+    { id: 1, name: "Vulnerable Web Lab", category: "Web Security", date: "2024", description: "مختبر ويب ضعيف", technologies: "JavaScript,Node.js", github: "https://github.com" },
+    { id: 2, name: "Auto Pentest Toolkit", category: "Automation", date: "2024", description: "أدوات اختبار اختراق آلية", technologies: "Python,Bash,Nmap", github: "https://github.com" }
+];
+
+let machineWriteups = JSON.parse(localStorage.getItem('machineWriteups')) || [
+    { id: 1, name: "Lame", platform: "HackTheBox", difficulty: "easy", date: "2024-01-15", description: "اختراق Lame", tags: "Samba,Linux", commands: "nmap -sV -sC 10.10.10.3", walkthrough: "الشرح الكامل...", likes: 42, views: 245 },
+    { id: 2, name: "Blue", platform: "HackTheBox", difficulty: "easy", date: "2024-01-10", description: "اختراق Blue", tags: "Windows,EternalBlue", commands: "nmap -p445 --script smb-vuln-ms17-010", walkthrough: "الشرح الكامل...", likes: 67, views: 412 }
+];
+
+let platformStats = { hackthebox: 45, tryhackme: 62, portswigger: 38, vulnhub: 25, pentesterlab: 20 };
+
+function displayCertificatesPublic() {
+    const container = document.getElementById('certificatesDisplayGrid');
+    if (!container) return;
+    let html = '';
+    certificates.forEach(cert => {
+        html += `<div class="cert-card" onclick="window.open('${cert.link || '#'}', '_blank')">
+            <div class="cert-info"><div class="cert-name">${cert.name}</div><div class="cert-issuer">${cert.issuer} | ${cert.date}</div><p>${cert.description?.substring(0, 80) || ''}...</p></div></div>`;
+    });
+    container.innerHTML = html || '<p>لا توجد شهادات</p>';
+}
+
+function displayProjectsPublic() {
+    const container = document.getElementById('projectsDisplayGrid');
+    if (!container) return;
+    let html = '';
+    projects.forEach(project => {
+        html += `<div class="project-card" onclick="window.open('${project.github || '#'}', '_blank')">
+            <div class="project-info"><div class="project-name">${project.name}</div><div class="project-category">📂 ${project.category} | 📅 ${project.date}</div><p>${project.description?.substring(0, 80) || ''}...</p><div>${(project.technologies || '').split(',').map(t => `<span class="admin-badge">${t.trim()}</span>`).join('')}</div></div></div>`;
+    });
+    container.innerHTML = html || '<p>لا توجد مشاريع</p>';
+}
+
+function displayMachineWriteups() {
+    const container = document.getElementById('machineWriteupsGrid');
+    if (!container) return;
+    let html = '';
+    machineWriteups.forEach(m => {
+        const diffText = { easy: 'سهل', medium: 'متوسط', hard: 'صعب', insane: 'جنوني' }[m.difficulty] || m.difficulty;
+        html += `<div class="writeup-machine-card" onclick="openMachineModal(${m.id})">
+            <div class="writeup-machine-header"><span class="writeup-machine-name">${m.name}</span><div><span class="writeup-machine-platform">${m.platform}</span><span class="writeup-machine-difficulty difficulty-${m.difficulty}">${diffText}</span></div></div>
+            <div class="writeup-machine-date">📅 ${m.date}</div><div class="writeup-machine-desc">${m.description?.substring(0, 100) || ''}...</div>
+            <div class="writeup-machine-tags">${(m.tags || '').split(',').map(t => `<span class="writeup-machine-tag">#${t.trim()}</span>`).join('')}</div>
+            <div class="writeup-machine-stats"><span>👁️ ${m.views}</span><span>👍 ${m.likes}</span></div></div>`;
+    });
+    container.innerHTML = html || '<p>لا توجد رايت اب</p>';
+}
+
+function openMachineModal(id) {
+    const m = machineWriteups.find(x => x.id === id);
+    if (!m) return;
+    m.views++;
+    localStorage.setItem('machineWriteups', JSON.stringify(machineWriteups));
+    const content = `<div><div><span>${m.platform}</span> | 📅 ${m.date}</div>
+        <div class="writeup-machine-tags">${(m.tags || '').split(',').map(t => `<span class="writeup-machine-tag">#${t.trim()}</span>`).join('')}</div>
+        ${m.commands ? `<div style="background:#0a0c0f;padding:15px;border-radius:10px;margin:15px 0;"><h4>💻 الأوامر</h4>${m.commands.split('\n').map(c => `<div>$ ${c}</div>`).join('')}</div>` : ''}
+        <div style="background:rgba(0,255,0,0.05);padding:20px;border-radius:15px;"><h3>📝 الشرح الكامل</h3><p>${m.walkthrough?.replace(/\n/g, '<br>') || ''}</p></div></div>`;
+    showModal(m.name, content);
+}
+
+function displayCertificatesAdmin() {
+    const container = document.getElementById('certificatesList');
+    if (!container) return;
+    let html = '';
+    certificates.forEach(cert => {
+        html += `<div style="background:rgba(15,20,25,0.8);border-radius:15px;padding:15px;margin-bottom:15px;"><div style="display:flex;justify-content:space-between;"><div><strong>${cert.name}</strong><br><small>${cert.issuer}</small></div><div><button class="edit-btn" onclick="deleteCertificate(${cert.id})" style="background:var(--accent-red);">🗑️</button></div></div><p>${cert.description?.substring(0, 100) || ''}...</p></div>`;
+    });
+    container.innerHTML = html || '<p>لا توجد شهادات</p>';
+}
+
+function displayProjectsAdmin() {
+    const container = document.getElementById('projectsList');
+    if (!container) return;
+    let html = '';
+    projects.forEach(proj => {
+        html += `<div style="background:rgba(15,20,25,0.8);border-radius:15px;padding:15px;margin-bottom:15px;"><div style="display:flex;justify-content:space-between;"><div><strong>${proj.name}</strong><br><small>${proj.category}</small></div><div><button class="edit-btn" onclick="deleteProject(${proj.id})" style="background:var(--accent-red);">🗑️</button></div></div><p>${proj.description?.substring(0, 100) || ''}...</p></div>`;
+    });
+    container.innerHTML = html || '<p>لا توجد مشاريع</p>';
+}
+
+function displayMachinesAdmin() {
+    const container = document.getElementById('machinesList');
+    if (!container) return;
+    let html = '';
+    machineWriteups.forEach(m => {
+        html += `<div style="background:rgba(15,20,25,0.8);border-radius:15px;padding:15px;margin-bottom:15px;"><div style="display:flex;justify-content:space-between;"><div><strong>${m.name}</strong><br><small>${m.platform}</small></div><div><button class="edit-btn" onclick="deleteMachine(${m.id})" style="background:var(--accent-red);">🗑️</button></div></div><p>${m.description?.substring(0, 100) || ''}...</p></div>`;
+    });
+    container.innerHTML = html || '<p>لا توجد رايت اب</p>';
+}
+
+function displayPlatformStats() {
+    const container = document.getElementById('platformStatsContainer');
+    if (!container) return;
+    const platforms = [
+        { id: 'hackthebox', name: 'HackTheBox', icon: '🐧' }, { id: 'tryhackme', name: 'TryHackMe', icon: '🎯' },
+        { id: 'portswigger', name: 'PortSwigger', icon: '🔍' }, { id: 'vulnhub', name: 'VulnHub', icon: '💀' },
+        { id: 'pentesterlab', name: 'PentesterLab', icon: '🧪' }
+    ];
+    let html = '';
+    platforms.forEach(p => { html += `<div class="stat-card"><div class="stat-platform-icon">${p.icon}</div><div class="stat-platform-name">${p.name}</div><div class="stat-count">${platformStats[p.id] || 0}</div><div class="stat-label">ماكينة محلولة</div></div>`; });
+    const total = Object.values(platformStats).reduce((a, b) => a + b, 0);
+    html += `<div class="stat-card"><div class="stat-platform-icon">📊</div><div class="stat-platform-name">Total</div><div class="stat-count">${total}</div><div class="stat-label">إجمالي الماكينات</div></div>`;
+    container.innerHTML = html;
+}
+
+function loadPlatformStatsEditor() {
+    const container = document.getElementById('platformStatsEditor');
+    if (!container) return;
+    const platforms = ['hackthebox', 'tryhackme', 'portswigger', 'vulnhub', 'pentesterlab'];
+    let html = '';
+    platforms.forEach(p => { html += `<div class="platform-stat-editor"><span>${p}</span><input type="number" id="stat_${p}" value="${platformStats[p] || 0}" min="0"></div>`; });
+    container.innerHTML = html;
+}
+
+function savePlatformStats() {
+    if (!isAdmin) return;
+    const platforms = ['hackthebox', 'tryhackme', 'portswigger', 'vulnhub', 'pentesterlab'];
+    platforms.forEach(p => { platformStats[p] = parseInt(document.getElementById(`stat_${p}`)?.value) || 0; });
+    localStorage.setItem('platformStats', JSON.stringify(platformStats));
+    displayPlatformStats();
+    alert('✅ تم حفظ الإحصائيات');
+}
+
+function addCertificate() {
+    if (!isAdmin) return;
+    const name = document.getElementById('certName')?.value;
+    const issuer = document.getElementById('certIssuer')?.value;
+    const date = document.getElementById('certDate')?.value;
+    const link = document.getElementById('certLink')?.value;
+    const desc = document.getElementById('certDesc')?.value;
+    if (!name || !issuer) { alert('❌ أدخل اسم الشهادة والجهة'); return; }
+    certificates.push({ id: Date.now(), name, issuer, date: date || new Date().getFullYear().toString(), link: link || '', description: desc || '' });
+    localStorage.setItem('certificates', JSON.stringify(certificates));
+    displayCertificatesAdmin(); displayCertificatesPublic();
+    alert('✅ تم إضافة الشهادة');
+}
+
+function deleteCertificate(id) {
+    if (!isAdmin) return;
+    if (confirm('⚠️ هل أنت متأكد؟')) {
+        certificates = certificates.filter(c => c.id !== id);
+        localStorage.setItem('certificates', JSON.stringify(certificates));
+        displayCertificatesAdmin(); displayCertificatesPublic();
+        alert('✅ تم حذف الشهادة');
+    }
+}
+
+function addProject() {
+    if (!isAdmin) return;
+    const name = document.getElementById('projectName')?.value;
+    const category = document.getElementById('projectCategory')?.value;
+    const date = document.getElementById('projectDate')?.value;
+    const desc = document.getElementById('projectDesc')?.value;
+    const tech = document.getElementById('projectTech')?.value;
+    const github = document.getElementById('projectGithub')?.value;
+    if (!name || !category) { alert('❌ أدخل اسم المشروع والتصنيف'); return; }
+    projects.push({ id: Date.now(), name, category, date: date || new Date().getFullYear().toString(), description: desc || '', technologies: tech || '', github: github || '' });
+    localStorage.setItem('projects', JSON.stringify(projects));
+    displayProjectsAdmin(); displayProjectsPublic();
+    alert('✅ تم إضافة المشروع');
+}
+
+function deleteProject(id) {
+    if (!isAdmin) return;
+    if (confirm('⚠️ هل أنت متأكد؟')) {
+        projects = projects.filter(p => p.id !== id);
+        localStorage.setItem('projects', JSON.stringify(projects));
+        displayProjectsAdmin(); displayProjectsPublic();
+        alert('✅ تم حذف المشروع');
+    }
+}
+
+function addMachineWriteup() {
+    if (!isAdmin) return;
+    const name = document.getElementById('machineName')?.value;
+    const platform = document.getElementById('machinePlatform')?.value;
+    const difficulty = document.getElementById('machineDifficulty')?.value;
+    const date = document.getElementById('machineDate')?.value;
+    const desc = document.getElementById('machineDesc')?.value;
+    const tags = document.getElementById('machineTags')?.value;
+    const commands = document.getElementById('machineCommands')?.value;
+    const walkthrough = document.getElementById('machineWalkthrough')?.value;
+    if (!name || !platform || !desc) { alert('❌ املأ الحقول المطلوبة'); return; }
+    machineWriteups.push({ id: Date.now(), name, platform, difficulty, date: date || new Date().toISOString().split('T')[0], description: desc, tags: tags || '', commands: commands || '', walkthrough: walkthrough || '', likes: 0, views: 0 });
+    localStorage.setItem('machineWriteups', JSON.stringify(machineWriteups));
+    displayMachinesAdmin(); displayMachineWriteups();
+    alert('✅ تم إضافة رايت اب');
+}
+
+function deleteMachine(id) {
+    if (!isAdmin) return;
+    if (confirm('⚠️ هل أنت متأكد؟')) {
+        machineWriteups = machineWriteups.filter(m => m.id !== id);
+        localStorage.setItem('machineWriteups', JSON.stringify(machineWriteups));
+        displayMachinesAdmin(); displayMachineWriteups();
+        alert('✅ تم حذف الرايت اب');
+    }
+}
+
+function showModal(title, content) {
+    let modal = document.getElementById('globalModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'globalModal';
+        modal.className = 'modal';
+        modal.innerHTML = `<div class="modal-content" style="max-width:900px;max-height:90vh;overflow-y:auto;padding:30px;"><span class="close-modal" onclick="this.parentElement.parentElement.classList.remove('active')">&times;</span><h2 id="modalTitle" style="color:var(--accent-cyan);margin-bottom:20px;"></h2><div id="modalContent"></div></div>`;
+        document.body.appendChild(modal);
+    }
+    document.getElementById('modalTitle').textContent = title;
+    document.getElementById('modalContent').innerHTML = content;
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+// تحديث دالة switchAdminTab لدعم التبويبات الجديدة
+const originalSwitch = switchAdminTab;
+switchAdminTab = function(tab) {
+    originalSwitch(tab);
+    if (tab === 'certs') { displayCertificatesAdmin(); }
+    if (tab === 'projects') { displayProjectsAdmin(); }
+    if (tab === 'machines') { displayMachinesAdmin(); }
+    if (tab === 'stats') { loadPlatformStatsEditor(); }
+}
+
+// تحديث دالة setLang لدعم الترجمة الجديدة
+const originalSetLang = setLang;
+setLang = function(lang) {
+    originalSetLang(lang);
+    displayCertificatesPublic();
+    displayProjectsPublic();
+    displayMachineWriteups();
+    displayPlatformStats();
+}
+
+// تحديث window.onload لعرض البيانات الجديدة
+const originalOnload = window.onload;
+window.onload = async function() {
+    if (originalOnload) await originalOnload();
+    displayCertificatesPublic();
+    displayProjectsPublic();
+    displayMachineWriteups();
+    displayPlatformStats();
+    if (isAdmin) {
+        displayCertificatesAdmin();
+        displayProjectsAdmin();
+        displayMachinesAdmin();
+        loadPlatformStatsEditor();
+    }
+}
