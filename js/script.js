@@ -9,7 +9,7 @@ let editingBlogId = null;
 let stepCounter = 0;
 let blogMediaList = [];
 
-// ========== JSONBin.io Configuration (المصدر الأساسي) ==========
+// ========== JSONBin.io Configuration ==========
 const JSONBIN_CONFIG = {
     binId: '69a2f38d43b1c97be9a68c0c',
     masterKey: '$2a$10$p/Egp26o3AWMuQUWxlxbFunqeANPB7Z2mDO5h5iMKs5Y6tv9vj2Cq',
@@ -23,166 +23,95 @@ let platformStats = { hackthebox: 0, tryhackme: 0, portswigger: 0, vulnhub: 0, p
 let machineWriteups = [];
 let blogPosts = [];
 
-// ========== مؤشر تحميل ==========
-function showLoading(show) {
-    let loader = document.getElementById('loadingIndicator');
-    if (!loader && show) {
-        loader = document.createElement('div');
-        loader.id = 'loadingIndicator';
-        loader.innerHTML = '<div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--bg-secondary); padding: 20px; border-radius: 15px; border: 2px solid var(--accent-cyan); z-index: 10001;">⏳ جاري التحميل...</div>';
-        document.body.appendChild(loader);
-    }
-    if (loader) loader.style.display = show ? 'flex' : 'none';
-}
-
-// ========== تحميل البيانات من السحابة (المصدر الأساسي) ==========
-async function loadAllData() {
-    showLoading(true);
-    console.log('🔄 جاري تحميل البيانات من السحابة...');
+// ========== تحميل البيانات من localStorage (حل مؤقت سريع) ==========
+function loadAllData() {
+    console.log('📁 تحميل البيانات...');
     
     try {
-        const response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_CONFIG.binId}/latest`, {
-            method: 'GET',
-            headers: {
-                'X-Master-Key': JSONBIN_CONFIG.masterKey,
-                'X-Access-Key': JSONBIN_CONFIG.accessKey
-            }
-        });
+        const savedCerts = localStorage.getItem('pentester_certificates');
+        const savedProjects = localStorage.getItem('pentester_projects');
+        const savedStats = localStorage.getItem('pentester_platform_stats');
+        const savedMachines = localStorage.getItem('pentester_machine_writeups');
+        const savedBlogs = localStorage.getItem('pentester_blog_posts');
         
-        if (response.ok) {
-            const data = await response.json();
-            
-            if (data.record && data.record.certificates) {
-                // تحميل البيانات من السحابة
-                certificates = data.record.certificates || [];
-                projects = data.record.projects || [];
-                platformStats = data.record.platformStats || { hackthebox: 0, tryhackme: 0, portswigger: 0, vulnhub: 0, pentesterlab: 0 };
-                machineWriteups = data.record.machineWriteups || [];
-                blogPosts = data.record.blogPosts || [];
-                
-                // حفظ نسخة في localStorage كاحتياطي
-                saveToLocalStorage();
-                
-                console.log(`✅ تم تحميل البيانات من السحابة: ${certificates.length} شهادة, ${projects.length} مشروع, ${machineWriteups.length} رايت اب`);
-            } else {
-                // أول مرة - مفيش بيانات في السحابة
-                console.log('📭 لا توجد بيانات في السحابة، جاري إنشاء بيانات تجريبية...');
-                initDefaultData();
-                await saveAllData(); // حفظ البيانات في السحابة
-            }
-        } else {
-            console.log('⚠️ فشل الاتصال بالسحابة، جاري التحميل من localStorage...');
-            loadFromLocalStorage();
+        certificates = savedCerts ? JSON.parse(savedCerts) : [];
+        projects = savedProjects ? JSON.parse(savedProjects) : [];
+        platformStats = savedStats ? JSON.parse(savedStats) : { hackthebox: 0, tryhackme: 0, portswigger: 0, vulnhub: 0, pentesterlab: 0 };
+        machineWriteups = savedMachines ? JSON.parse(savedMachines) : [];
+        blogPosts = savedBlogs ? JSON.parse(savedBlogs) : [];
+        
+        // بيانات تجريبية لو مفيش حاجة
+        if (certificates.length === 0) {
+            certificates = [
+                { id: 1, name: "OSCP", issuer: "Offensive Security", date: "2024", link: "https://www.offsec.com", desc: "شهادة OSCP المهنية", skills: "Linux,Windows", imageData: "" },
+                { id: 2, name: "CEH Master", issuer: "EC-Council", date: "2024", link: "https://www.eccouncil.org", desc: "شهادة الهاكر الأخلاقي", skills: "Network,Security", imageData: "" }
+            ];
+            localStorage.setItem('pentester_certificates', JSON.stringify(certificates));
         }
-    } catch (error) {
-        console.error('❌ خطأ في الاتصال بالسحابة:', error);
-        loadFromLocalStorage();
+        
+        if (projects.length === 0) {
+            projects = [
+                { id: 1, name: "Vulnerable Web Lab", category: "Web Security", date: "2024", desc: "مختبر ويب ضعيف", tech: "JavaScript,Node.js", github: "https://github.com", imageData: "", status: "completed" }
+            ];
+            localStorage.setItem('pentester_projects', JSON.stringify(projects));
+        }
+        
+        if (machineWriteups.length === 0) {
+            machineWriteups = [
+                { id: 1, name: "Lame", platform: "HackTheBox", difficulty: "easy", date: "2024-01-15", desc: "اختراق Lame", tags: "Samba,Linux", commands: "nmap -sV -sC 10.10.10.3", walkthrough: "الشرح الكامل...", steps: [], likes: 42, views: 245 }
+            ];
+            localStorage.setItem('pentester_machine_writeups', JSON.stringify(machineWriteups));
+        }
+        
+        if (blogPosts.length === 0) {
+            blogPosts = [
+                { id: 100, title: "شرح ثغرة SQL Injection", platform: "Blog", date: "2024-01-20", content: "شرح كامل لثغرة SQL Injection...", tags: "SQLi,Web Security", views: 150, likes: 25, media: [] }
+            ];
+            localStorage.setItem('pentester_blog_posts', JSON.stringify(blogPosts));
+        }
+        
+        console.log('✅ تم تحميل البيانات');
+    } catch(e) {
+        console.error('❌ خطأ في التحميل:', e);
     }
     
     // تحديث العرض
     refreshDisplay();
-    showLoading(false);
 }
 
-// ========== حفظ البيانات في السحابة ==========
-async function saveAllData() {
-    console.log('💾 جاري حفظ البيانات في السحابة...');
-    showLoading(true);
-    
+// حفظ البيانات في localStorage
+function saveAllData() {
     try {
-        const allData = {
-            certificates: certificates,
-            projects: projects,
-            platformStats: platformStats,
-            machineWriteups: machineWriteups,
-            blogPosts: blogPosts,
-            lastUpdated: new Date().toISOString(),
-            updatedBy: isAdmin ? 'Admin' : 'System'
-        };
+        localStorage.setItem('pentester_certificates', JSON.stringify(certificates));
+        localStorage.setItem('pentester_projects', JSON.stringify(projects));
+        localStorage.setItem('pentester_platform_stats', JSON.stringify(platformStats));
+        localStorage.setItem('pentester_machine_writeups', JSON.stringify(machineWriteups));
+        localStorage.setItem('pentester_blog_posts', JSON.stringify(blogPosts));
+        console.log('✅ تم حفظ البيانات');
         
-        const response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_CONFIG.binId}`, {
+        // محاولة حفظ في السحابة (خلفية)
+        saveToCloudAsync();
+        return true;
+    } catch(e) {
+        console.error('❌ فشل الحفظ:', e);
+        return false;
+    }
+}
+
+// حفظ في السحابة (خلفية - مش هتأثر على الأداء)
+async function saveToCloudAsync() {
+    try {
+        const allData = { certificates, projects, platformStats, machineWriteups, blogPosts, lastUpdated: new Date().toISOString() };
+        await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_CONFIG.binId}`, {
             method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Master-Key': JSONBIN_CONFIG.masterKey,
-                'X-Access-Key': JSONBIN_CONFIG.accessKey
-            },
+            headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_CONFIG.masterKey, 'X-Access-Key': JSONBIN_CONFIG.accessKey },
             body: JSON.stringify(allData)
         });
-        
-        if (response.ok) {
-            console.log('✅ تم حفظ البيانات في السحابة بنجاح');
-            saveToLocalStorage(); // تحديث النسخة المحلية
-        } else {
-            throw new Error(`HTTP ${response.status}`);
-        }
-    } catch (error) {
-        console.error('❌ فشل الحفظ في السحابة:', error);
-        alert('⚠️ فشل الاتصال بالسحابة، تم الحفظ محلياً فقط. سيتم المحاولة مرة أخرى لاحقاً.');
-        saveToLocalStorage(); // حفظ محلي على الأقل
-    } finally {
-        showLoading(false);
-    }
+        console.log('✅ تم الحفظ في السحابة');
+    } catch(e) { console.log('⚠️ فشل الحفظ في السحابة'); }
 }
 
-// ========== حفظ في localStorage (نسخة احتياطية) ==========
-function saveToLocalStorage() {
-    localStorage.setItem('pentester_certificates', JSON.stringify(certificates));
-    localStorage.setItem('pentester_projects', JSON.stringify(projects));
-    localStorage.setItem('pentester_platform_stats', JSON.stringify(platformStats));
-    localStorage.setItem('pentester_machine_writeups', JSON.stringify(machineWriteups));
-    localStorage.setItem('pentester_blog_posts', JSON.stringify(blogPosts));
-    console.log('📁 تم الحفظ في localStorage');
-}
-
-// ========== تحميل من localStorage (نسخة احتياطية) ==========
-function loadFromLocalStorage() {
-    console.log('📁 جاري التحميل من localStorage...');
-    
-    const savedCerts = localStorage.getItem('pentester_certificates');
-    const savedProjects = localStorage.getItem('pentester_projects');
-    const savedStats = localStorage.getItem('pentester_platform_stats');
-    const savedMachines = localStorage.getItem('pentester_machine_writeups');
-    const savedBlogs = localStorage.getItem('pentester_blog_posts');
-    
-    certificates = savedCerts ? JSON.parse(savedCerts) : [];
-    projects = savedProjects ? JSON.parse(savedProjects) : [];
-    platformStats = savedStats ? JSON.parse(savedStats) : { hackthebox: 0, tryhackme: 0, portswigger: 0, vulnhub: 0, pentesterlab: 0 };
-    machineWriteups = savedMachines ? JSON.parse(savedMachines) : [];
-    blogPosts = savedBlogs ? JSON.parse(savedBlogs) : [];
-    
-    // لو مفيش بيانات خالص، نضيف بيانات تجريبية
-    if (certificates.length === 0 && projects.length === 0 && machineWriteups.length === 0) {
-        initDefaultData();
-    }
-}
-
-// ========== بيانات تجريبية افتراضية ==========
-function initDefaultData() {
-    certificates = [
-        { id: 1, name: "OSCP", issuer: "Offensive Security", date: "2024", link: "https://www.offsec.com", desc: "شهادة OSCP المهنية - اختبار الاختراق العملي", skills: "Linux,Windows,PrivEsc", imageData: "" },
-        { id: 2, name: "CEH Master", issuer: "EC-Council", date: "2024", link: "https://www.eccouncil.org", desc: "شهادة الهاكر الأخلاقي المعتمد", skills: "Network,Security,Footprinting", imageData: "" },
-        { id: 3, name: "CRTP", issuer: "Pentester Academy", date: "2024", link: "https://www.pentesteracademy.com", desc: "شهادة اختبار اختراق Active Directory", skills: "AD,Kerberos,PrivEsc", imageData: "" }
-    ];
-    
-    projects = [
-        { id: 1, name: "Vulnerable Web Lab", category: "Web Security", date: "2024", desc: "مختبر ويب ضعيف لتعليم ثغرات OWASP Top 10", tech: "JavaScript,Node.js,Express", github: "https://github.com/ixZODiAK/vulnerable-lab", imageData: "", status: "completed", features: "15 تحدياً أمنياً\nواجهة تفاعلية\nشرح مفصل" },
-        { id: 2, name: "Auto Pentest Toolkit", category: "Automation", date: "2024", desc: "أدوات آلية لأتمتة اختبارات الاختراق", tech: "Python,Bash,Nmap,Metasploit", github: "https://github.com/ixZODiAK/auto-pentest", imageData: "", status: "in-progress", features: "جمع معلومات تلقائي\nفحص ثغرات\nتوليد تقارير PDF" }
-    ];
-    
-    platformStats = { hackthebox: 45, tryhackme: 62, portswigger: 38, vulnhub: 25, pentesterlab: 20 };
-    
-    machineWriteups = [
-        { id: 1, name: "Lame", platform: "HackTheBox", difficulty: "easy", date: "2024-01-15", desc: "اختراق جهاز Lame باستخدام ثغرة Samba", tags: "Samba,Linux,CVE-2007-2447", commands: "nmap -sV -sC 10.10.10.3\nsearchsploit samba 3.0.20\nmsfconsole -q -x 'use exploit/multi/samba/usermap_script; set RHOST 10.10.10.3; exploit'", walkthrough: "الشرح الكامل لاختراق جهاز Lame...", steps: [], likes: 42, views: 245 },
-        { id: 2, name: "Blue", platform: "HackTheBox", difficulty: "easy", date: "2024-01-10", desc: "اختراق جهاز Blue باستخدام ثغرة EternalBlue", tags: "Windows,EternalBlue,MS17-010", commands: "nmap -p445 --script smb-vuln-ms17-010 10.10.10.40\nmsfconsole -q -x 'use exploit/windows/smb/ms17_010_eternalblue; set RHOST 10.10.10.40; exploit'", walkthrough: "الشرح الكامل لاختراق Blue...", steps: [], likes: 67, views: 412 }
-    ];
-    
-    blogPosts = [
-        { id: 100, title: "شرح ثغرة SQL Injection", platform: "Blog", date: "2024-01-20", content: "شرح كامل لثغرة SQL Injection وكيفية استغلالها والوقاية منها...", tags: "SQLi,Web Security", views: 150, likes: 25, media: [] }
-    ];
-}
-
-// ========== تحديث واجهة العرض ==========
+// تحديث واجهة العرض
 function refreshDisplay() {
     displayCertificatesAdmin();
     displayCertificatesPublic();
@@ -196,7 +125,7 @@ function refreshDisplay() {
 // ========== دوال مساعدة ==========
 function escapeHtml(text) {
     if (!text) return '';
-    return text.replace(/[&<>]/g, function(m) {
+    return String(text).replace(/[&<>]/g, function(m) {
         if (m === '&') return '&amp;';
         if (m === '<') return '&lt;';
         if (m === '>') return '&gt;';
@@ -224,7 +153,7 @@ function displayCertificatesAdmin() {
     if (!certificates.length) { container.innerHTML = '<p style="color: var(--text-secondary); text-align: center;">لا توجد شهادات</p>'; return; }
     
     let html = '';
-    certificates.forEach(cert => {
+    for (let cert of certificates) {
         html += `
             <div class="cert-admin-card" style="background: rgba(15,20,25,0.8); border-radius: 15px; padding: 15px; margin-bottom: 15px; border: 1px solid var(--accent-purple);">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
@@ -235,10 +164,10 @@ function displayCertificatesAdmin() {
                     </div>
                 </div>
                 ${cert.imageData ? `<img src="${cert.imageData}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 10px; margin-top: 10px;">` : '<div style="width: 80px; height: 80px; background: var(--accent-purple); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-top: 10px;">🏆</div>'}
-                <p style="margin-top: 10px; font-size: 0.8rem;">${escapeHtml(cert.desc?.substring(0, 100) || '')}...</p>
+                <p style="margin-top: 10px; font-size: 0.8rem;">${escapeHtml((cert.desc || '').substring(0, 100))}...</p>
             </div>
         `;
-    });
+    }
     container.innerHTML = html;
 }
 
@@ -248,18 +177,18 @@ function displayCertificatesPublic() {
     if (!certificates.length) { container.innerHTML = '<p style="color: var(--text-secondary); text-align: center;">لا توجد شهادات</p>'; return; }
     
     let html = '';
-    certificates.forEach(cert => {
+    for (let cert of certificates) {
         html += `
             <div class="cert-card" onclick="window.open('${cert.link || '#'}', '_blank')" style="cursor: pointer;">
                 ${cert.imageData ? `<img src="${cert.imageData}">` : '<div style="height: 180px; background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple)); display: flex; align-items: center; justify-content: center; font-size: 3rem;">🏆</div>'}
                 <div class="cert-info">
                     <div class="cert-name">${escapeHtml(cert.name)}</div>
                     <div class="cert-issuer">${escapeHtml(cert.issuer)} | ${cert.date}</div>
-                    <p style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 5px;">${escapeHtml(cert.desc?.substring(0, 80) || '')}...</p>
+                    <p style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 5px;">${escapeHtml((cert.desc || '').substring(0, 80))}...</p>
                 </div>
             </div>
         `;
-    });
+    }
     container.innerHTML = html;
 }
 
@@ -276,11 +205,19 @@ function addCertificate() {
     
     if (!name || !issuer) { alert('❌ أدخل اسم الشهادة والجهة المانحة'); return; }
     
-    const newCert = { id: Date.now(), name, issuer, date: date || new Date().getFullYear().toString(), link: link || '', desc: desc || '', skills: skills || '', imageData: imageData || '' };
+    const newCert = { 
+        id: Date.now(), 
+        name: name, 
+        issuer: issuer, 
+        date: date || new Date().getFullYear().toString(), 
+        link: link || '', 
+        desc: desc || '', 
+        skills: skills || '', 
+        imageData: imageData || '' 
+    };
     certificates.push(newCert);
-    await saveAllData();  // حفظ في السحابة
+    saveAllData();
     
-    // تفريغ الحقول
     document.getElementById('certName').value = '';
     document.getElementById('certIssuer').value = '';
     document.getElementById('certDate').value = '';
@@ -292,7 +229,7 @@ function addCertificate() {
     document.getElementById('certImageInput').value = '';
     
     refreshDisplay();
-    alert('✅ تم إضافة الشهادة (محفوظة في السحابة للجميع)');
+    alert('✅ تم إضافة الشهادة');
 }
 
 function editCertificate(id) {
@@ -320,7 +257,7 @@ function editCertificate(id) {
     alert(`✏️ تعديل شهادة: ${cert.name}`);
 }
 
-async function updateCertificate() {
+function updateCertificate() {
     if (!isAdmin || !editingCertId) return;
     const index = certificates.findIndex(c => c.id === editingCertId);
     if (index === -1) return;
@@ -333,7 +270,7 @@ async function updateCertificate() {
     certificates[index].skills = document.getElementById('certSkills')?.value || '';
     certificates[index].imageData = document.getElementById('certImageData')?.value || '';
     
-    await saveAllData();
+    saveAllData();
     
     const updateBtn = document.querySelector('#certsForm .admin-tab[onclick="updateCertificate()"]');
     if (updateBtn) {
@@ -354,14 +291,14 @@ async function updateCertificate() {
     
     editingCertId = null;
     refreshDisplay();
-    alert('✅ تم تحديث الشهادة (محفوظة في السحابة)');
+    alert('✅ تم تحديث الشهادة');
 }
 
-async function deleteCertificate(id) {
+function deleteCertificate(id) {
     if (!isAdmin) return;
     if (confirm('⚠️ هل أنت متأكد من حذف هذه الشهادة؟')) {
         certificates = certificates.filter(c => c.id !== id);
-        await saveAllData();
+        saveAllData();
         refreshDisplay();
         alert('✅ تم حذف الشهادة');
     }
@@ -374,7 +311,7 @@ function displayProjectsAdmin() {
     if (!projects.length) { container.innerHTML = '<p style="color: var(--text-secondary); text-align: center;">لا توجد مشاريع</p>'; return; }
     
     let html = '';
-    projects.forEach(project => {
+    for (let project of projects) {
         html += `
             <div class="project-admin-card" style="background: rgba(15,20,25,0.8); border-radius: 15px; padding: 15px; margin-bottom: 15px; border: 1px solid var(--accent-green);">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
@@ -385,10 +322,10 @@ function displayProjectsAdmin() {
                     </div>
                 </div>
                 ${project.imageData ? `<img src="${project.imageData}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 10px; margin-top: 10px;">` : '<div style="width: 80px; height: 80px; background: var(--accent-green); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-top: 10px;">📁</div>'}
-                <p style="margin-top: 10px; font-size: 0.8rem;">${escapeHtml(project.desc?.substring(0, 100) || '')}...</p>
+                <p style="margin-top: 10px; font-size: 0.8rem;">${escapeHtml((project.desc || '').substring(0, 100))}...</p>
             </div>
         `;
-    });
+    }
     container.innerHTML = html;
 }
 
@@ -398,20 +335,20 @@ function displayProjectsPublic() {
     if (!projects.length) { container.innerHTML = '<p style="color: var(--text-secondary); text-align: center;">لا توجد مشاريع</p>'; return; }
     
     let html = '';
-    projects.forEach(project => {
+    for (let project of projects) {
         html += `
             <div class="project-card" style="cursor: pointer;" onclick="if('${project.github}') window.open('${project.github}', '_blank')">
                 ${project.imageData ? `<img src="${project.imageData}">` : '<div style="height: 180px; background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple)); display: flex; align-items: center; justify-content: center; font-size: 3rem;">📁</div>'}
                 <div class="project-info">
                     <div class="project-name">${escapeHtml(project.name)}</div>
                     <div class="project-category">📂 ${escapeHtml(project.category)} | 📅 ${project.date}</div>
-                    <p style="color: var(--text-secondary); font-size: 0.8rem; margin: 10px 0;">${escapeHtml(project.desc?.substring(0, 80) || '')}...</p>
-                    <div style="display: flex; flex-wrap: wrap; gap: 5px;">${project.tech?.split(',').map(t => `<span class="admin-badge">${escapeHtml(t.trim())}</span>`).join('') || ''}</div>
+                    <p style="color: var(--text-secondary); font-size: 0.8rem; margin: 10px 0;">${escapeHtml((project.desc || '').substring(0, 80))}...</p>
+                    <div style="display: flex; flex-wrap: wrap; gap: 5px;">${(project.tech || '').split(',').map(t => `<span class="admin-badge">${escapeHtml(t.trim())}</span>`).join('') || ''}</div>
                     ${project.github ? `<a href="${project.github}" target="_blank" style="color: var(--accent-cyan); font-size: 0.8rem; display: inline-block; margin-top: 10px;" onclick="event.stopPropagation();">🔗 GitHub</a>` : ''}
                 </div>
             </div>
         `;
-    });
+    }
     container.innerHTML = html;
 }
 
@@ -430,9 +367,20 @@ function addProject() {
     
     if (!name || !category) { alert('❌ أدخل اسم المشروع والتصنيف'); return; }
     
-    const newProject = { id: Date.now(), name, category, date: date || new Date().getFullYear().toString(), desc: desc || '', tech: tech || '', github: github || '', status: status || 'in-progress', features: features || '', imageData: imageData || '' };
+    const newProject = { 
+        id: Date.now(), 
+        name: name, 
+        category: category, 
+        date: date || new Date().getFullYear().toString(), 
+        desc: desc || '', 
+        tech: tech || '', 
+        github: github || '', 
+        status: status || 'in-progress', 
+        features: features || '', 
+        imageData: imageData || '' 
+    };
     projects.push(newProject);
-    await saveAllData();
+    saveAllData();
     
     document.getElementById('projectName').value = '';
     document.getElementById('projectCategory').value = '';
@@ -446,7 +394,7 @@ function addProject() {
     document.getElementById('projectImageInput').value = '';
     
     refreshDisplay();
-    alert('✅ تم إضافة المشروع (محفوظ في السحابة للجميع)');
+    alert('✅ تم إضافة المشروع');
 }
 
 function editProject(id) {
@@ -476,7 +424,7 @@ function editProject(id) {
     alert(`✏️ تعديل مشروع: ${project.name}`);
 }
 
-async function updateProject() {
+function updateProject() {
     if (!isAdmin || !editingProjectId) return;
     const index = projects.findIndex(p => p.id === editingProjectId);
     if (index === -1) return;
@@ -491,7 +439,7 @@ async function updateProject() {
     projects[index].features = document.getElementById('projectFeatures')?.value || '';
     projects[index].imageData = document.getElementById('projectImageData')?.value || '';
     
-    await saveAllData();
+    saveAllData();
     
     const updateBtn = document.querySelector('#projectsForm .admin-tab[onclick="updateProject()"]');
     if (updateBtn) {
@@ -513,14 +461,14 @@ async function updateProject() {
     
     editingProjectId = null;
     refreshDisplay();
-    alert('✅ تم تحديث المشروع (محفوظ في السحابة)');
+    alert('✅ تم تحديث المشروع');
 }
 
-async function deleteProject(id) {
+function deleteProject(id) {
     if (!isAdmin) return;
     if (confirm('⚠️ هل أنت متأكد من حذف هذا المشروع؟')) {
         projects = projects.filter(p => p.id !== id);
-        await saveAllData();
+        saveAllData();
         refreshDisplay();
         alert('✅ تم حذف المشروع');
     }
@@ -571,7 +519,7 @@ function displayMachineWriteups() {
     if (!machineWriteups.length) { container.innerHTML = '<p style="color: var(--text-secondary); text-align: center;">لا توجد رايت اب</p>'; return; }
     
     let html = '';
-    machineWriteups.forEach(machine => {
+    for (let machine of machineWriteups) {
         const diffClass = `difficulty-${machine.difficulty}`;
         const diffText = { easy: 'سهل', medium: 'متوسط', hard: 'صعب', insane: 'جنوني' }[machine.difficulty] || machine.difficulty;
         html += `
@@ -581,17 +529,17 @@ function displayMachineWriteups() {
                     <div><span class="writeup-machine-platform">${escapeHtml(machine.platform)}</span><span class="writeup-machine-difficulty ${diffClass}">${diffText}</span></div>
                 </div>
                 <div class="writeup-machine-date">📅 ${machine.date}</div>
-                <div class="writeup-machine-desc">${escapeHtml(machine.desc?.substring(0, 100) || '')}...</div>
-                <div class="writeup-machine-tags">${machine.tags?.split(',').map(t => `<span class="writeup-machine-tag">#${escapeHtml(t.trim())}</span>`).join('') || ''}</div>
+                <div class="writeup-machine-desc">${escapeHtml((machine.desc || '').substring(0, 100))}...</div>
+                <div class="writeup-machine-tags">${(machine.tags || '').split(',').map(t => `<span class="writeup-machine-tag">#${escapeHtml(t.trim())}</span>`).join('') || ''}</div>
                 <div class="writeup-machine-stats"><span class="stat">👁️ ${machine.views}</span><span class="stat">👍 ${machine.likes}</span></div>
                 ${isAdmin ? `<div style="margin-top: 10px;"><button class="edit-btn" onclick="event.stopPropagation(); editMachineWriteup(${machine.id})" style="background: var(--accent-yellow);">✏️ تعديل</button> <button class="delete-btn" onclick="event.stopPropagation(); deleteMachineWriteup(${machine.id})" style="background: var(--accent-red);">🗑️ حذف</button></div>` : ''}
             </div>
         `;
-    });
+    }
     container.innerHTML = html;
 }
 
-async function addMachineWriteup() {
+function addMachineWriteup() {
     if (!isAdmin) { alert('❌ يجب تسجيل الدخول كأدمن'); return; }
     
     const name = document.getElementById('machineName')?.value;
@@ -611,12 +559,25 @@ async function addMachineWriteup() {
         const stepDesc = document.getElementById(`stepDesc_${i}`)?.value;
         const mediaData = document.getElementById(`stepMediaData_${i}`)?.value;
         const command = document.getElementById(`stepCommand_${i}`)?.value;
-        if (title || stepDesc) steps.push({ title, desc: stepDesc, mediaData, command });
+        if (title || stepDesc) steps.push({ title: title || '', desc: stepDesc || '', mediaData: mediaData || '', command: command || '' });
     }
     
-    const newMachine = { id: Date.now(), name, platform, difficulty, date: date || new Date().toISOString().split('T')[0], desc, tags: tags || '', commands: commands || '', walkthrough: walkthrough || '', steps, likes: 0, views: 0 };
+    const newMachine = { 
+        id: Date.now(), 
+        name: name, 
+        platform: platform, 
+        difficulty: difficulty, 
+        date: date || new Date().toISOString().split('T')[0], 
+        desc: desc, 
+        tags: tags || '', 
+        commands: commands || '', 
+        walkthrough: walkthrough || '', 
+        steps: steps, 
+        likes: 0, 
+        views: 0 
+    };
     machineWriteups.push(newMachine);
-    await saveAllData();
+    saveAllData();
     
     document.getElementById('machineName').value = '';
     document.getElementById('machineDesc').value = '';
@@ -627,7 +588,7 @@ async function addMachineWriteup() {
     stepCounter = 0;
     
     refreshDisplay();
-    alert('✅ تم إضافة رايت اب (محفوظ في السحابة للجميع)');
+    alert('✅ تم إضافة رايت اب');
 }
 
 function editMachineWriteup(id) {
@@ -649,7 +610,7 @@ function editMachineWriteup(id) {
         container.innerHTML = '';
         stepCounter = 0;
         if (machine.steps && machine.steps.length) {
-            machine.steps.forEach((step, idx) => {
+            for (let step of machine.steps) {
                 const stepId = stepCounter++;
                 const stepHtml = `
                     <div class="step-card" id="step_${stepId}" style="background: rgba(0,0,0,0.3); border-radius: 15px; padding: 15px; margin-bottom: 15px; border-right: 3px solid var(--accent-green);">
@@ -666,7 +627,7 @@ function editMachineWriteup(id) {
                     </div>
                 `;
                 container.insertAdjacentHTML('beforeend', stepHtml);
-            });
+            }
         }
     }
     
@@ -679,7 +640,7 @@ function editMachineWriteup(id) {
     alert(`✏️ تعديل رايت اب: ${machine.name}`);
 }
 
-async function updateMachineWriteup() {
+function updateMachineWriteup() {
     if (!isAdmin || !editingMachineId) return;
     const index = machineWriteups.findIndex(m => m.id === editingMachineId);
     if (index === -1) return;
@@ -690,7 +651,7 @@ async function updateMachineWriteup() {
         const stepDesc = document.getElementById(`stepDesc_${i}`)?.value;
         const mediaData = document.getElementById(`stepMediaData_${i}`)?.value;
         const command = document.getElementById(`stepCommand_${i}`)?.value;
-        if (title || stepDesc) steps.push({ title, desc: stepDesc, mediaData, command });
+        if (title || stepDesc) steps.push({ title: title || '', desc: stepDesc || '', mediaData: mediaData || '', command: command || '' });
     }
     
     machineWriteups[index] = {
@@ -706,7 +667,7 @@ async function updateMachineWriteup() {
         steps: steps
     };
     
-    await saveAllData();
+    saveAllData();
     
     const updateBtn = document.querySelector('#machinesForm .admin-tab[onclick="updateMachineWriteup()"]');
     if (updateBtn) {
@@ -725,14 +686,14 @@ async function updateMachineWriteup() {
     editingMachineId = null;
     
     refreshDisplay();
-    alert('✅ تم تحديث رايت اب (محفوظ في السحابة)');
+    alert('✅ تم تحديث رايت اب');
 }
 
-async function deleteMachineWriteup(id) {
+function deleteMachineWriteup(id) {
     if (!isAdmin) return;
     if (confirm('⚠️ هل أنت متأكد من حذف هذا الرايت اب؟')) {
         machineWriteups = machineWriteups.filter(m => m.id !== id);
-        await saveAllData();
+        saveAllData();
         refreshDisplay();
         alert('✅ تم حذف الرايت اب');
     }
@@ -742,12 +703,12 @@ function openMachineWalkthrough(id) {
     const machine = machineWriteups.find(m => m.id === id);
     if (!machine) return;
     machine.views++;
-    saveAllData(); // لا نستخدم await عشان ما نأخرش فتح المودال
+    saveAllData();
     
     let stepsHtml = '';
     if (machine.steps && machine.steps.length) {
         stepsHtml = '<div style="margin: 20px 0;"><h3 style="color: var(--accent-green);">📸 خطوات الاختراق</h3>';
-        machine.steps.forEach(step => {
+        for (let step of machine.steps) {
             stepsHtml += `
                 <div style="background: rgba(0,255,0,0.05); padding: 15px; border-radius: 10px; margin-bottom: 15px;">
                     <h4 style="color: var(--accent-cyan);">${escapeHtml(step.title)}</h4>
@@ -756,14 +717,14 @@ function openMachineWalkthrough(id) {
                     ${step.command ? `<div style="background: #0a0c0f; padding: 10px; border-radius: 8px; font-family: monospace; margin-top: 10px;">$ ${escapeHtml(step.command)}</div>` : ''}
                 </div>
             `;
-        });
+        }
         stepsHtml += '</div>';
     }
     
     const modalContent = `
         <div>
             <div style="display: flex; gap: 10px; margin-bottom: 15px;"><span class="writeup-machine-platform">${escapeHtml(machine.platform)}</span><span>📅 ${machine.date}</span></div>
-            <div class="writeup-machine-tags">${machine.tags?.split(',').map(t => `<span class="writeup-machine-tag">#${escapeHtml(t.trim())}</span>`).join('') || ''}</div>
+            <div class="writeup-machine-tags">${(machine.tags || '').split(',').map(t => `<span class="writeup-machine-tag">#${escapeHtml(t.trim())}</span>`).join('') || ''}</div>
             ${machine.commands ? `<div style="background: #0a0c0f; padding: 15px; border-radius: 10px; margin: 15px 0;"><h4>💻 الأوامر</h4>${machine.commands.split('\n').map(c => `<div style="font-family: monospace;">$ ${escapeHtml(c)}</div>`).join('')}</div>` : ''}
             ${stepsHtml}
             <div style="background: rgba(0,255,255,0.02); padding: 20px; border-radius: 15px;"><h3 style="color: var(--accent-green);">📝 الشرح الكامل</h3><p style="line-height: 1.8;">${escapeHtml(machine.walkthrough || '').replace(/\n/g, '<br>')}</p></div>
@@ -775,15 +736,15 @@ function openMachineWalkthrough(id) {
 // ==================== إدارة المقالات ====================
 function handleBlogMediaUpload(input) {
     const files = Array.from(input.files);
-    files.forEach(file => {
-        if (file.size > 10 * 1024 * 1024) { alert(`❌ ملف ${file.name} كبير جداً`); return; }
+    for (let file of files) {
+        if (file.size > 10 * 1024 * 1024) { alert(`❌ ملف ${file.name} كبير جداً`); continue; }
         const reader = new FileReader();
         reader.onload = function(e) {
             blogMediaList.push({ url: e.target.result, type: file.type.startsWith('image/') ? 'image' : 'video', name: file.name });
             displayBlogMediaPreview();
         };
         reader.readAsDataURL(file);
-    });
+    }
     input.value = '';
 }
 
@@ -792,9 +753,10 @@ function displayBlogMediaPreview() {
     if (!container) return;
     if (!blogMediaList.length) { container.innerHTML = ''; return; }
     let html = '';
-    blogMediaList.forEach((item, index) => {
-        html += `<div class="preview-item">${item.type === 'image' ? `<img src="${item.url}">` : `<video src="${item.url}"></video>`}<button class="remove-media" onclick="removeBlogMedia(${index})">✕</button></div>`;
-    });
+    for (let i = 0; i < blogMediaList.length; i++) {
+        const item = blogMediaList[i];
+        html += `<div class="preview-item">${item.type === 'image' ? `<img src="${item.url}">` : `<video src="${item.url}"></video>`}<button class="remove-media" onclick="removeBlogMedia(${i})">✕</button></div>`;
+    }
     container.innerHTML = html;
 }
 
@@ -805,39 +767,49 @@ function displayBlogPosts() {
     if (!container) return;
     if (!blogPosts.length) { container.innerHTML = '<p style="color: var(--text-secondary); text-align: center;">لا توجد مقالات</p>'; return; }
     let html = '';
-    blogPosts.forEach(post => {
+    for (let post of blogPosts) {
         html += `
             <div class="blog-card">
                 <div style="display: flex; justify-content: space-between;"><span class="blog-platform">${escapeHtml(post.platform)}</span><span>📅 ${post.date}</span></div>
                 <h3 class="blog-title">${escapeHtml(post.title)}</h3>
-                <div class="blog-tags">${post.tags?.split(',').map(t => `<span class="blog-tag">#${escapeHtml(t.trim())}</span>`).join('') || ''}</div>
-                <div class="blog-content">${escapeHtml(post.content?.substring(0, 150) || '')}...</div>
+                <div class="blog-tags">${(post.tags || '').split(',').map(t => `<span class="blog-tag">#${escapeHtml(t.trim())}</span>`).join('') || ''}</div>
+                <div class="blog-content">${escapeHtml((post.content || '').substring(0, 150))}...</div>
                 <div class="blog-stats"><span class="stat">👁️ ${post.views}</span><button class="reaction-btn" onclick="likePost(${post.id})">👍 ${post.likes}</button></div>
                 <button class="admin-tab" onclick="readFullPost(${post.id})">📖 اقرأ المزيد</button>
                 ${isAdmin ? `<div style="margin-top: 10px;"><button class="edit-btn" onclick="editBlogPost(${post.id})" style="background: var(--accent-yellow);">✏️ تعديل</button> <button class="delete-btn" onclick="deleteBlogPost(${post.id})" style="background: var(--accent-red);">🗑️ حذف</button></div>` : ''}
             </div>
         `;
-    });
+    }
     container.innerHTML = html;
 }
 
-async function addBlogPost() {
+function addBlogPost() {
     if (!isAdmin) { alert('❌ يجب تسجيل الدخول كأدمن'); return; }
     const title = document.getElementById('blogTitle')?.value;
     const platform = document.getElementById('blogPlatform')?.value;
     const content = document.getElementById('blogContent')?.value;
     const tags = document.getElementById('blogTags')?.value;
     if (!title || !content) { alert('❌ أدخل عنوان ومحتوى المقال'); return; }
-    const newPost = { id: Date.now(), title, platform, date: new Date().toISOString().split('T')[0], content, tags: tags || '', views: 0, likes: 0, media: [...blogMediaList] };
+    const newPost = { 
+        id: Date.now(), 
+        title: title, 
+        platform: platform, 
+        date: new Date().toISOString().split('T')[0], 
+        content: content, 
+        tags: tags || '', 
+        views: 0, 
+        likes: 0, 
+        media: [...blogMediaList] 
+    };
     blogPosts.push(newPost);
-    await saveAllData();
+    saveAllData();
     document.getElementById('blogTitle').value = '';
     document.getElementById('blogContent').value = '';
     document.getElementById('blogTags').value = '';
     blogMediaList = [];
     displayBlogMediaPreview();
     refreshDisplay();
-    alert('✅ تم نشر المقال (محفوظ في السحابة للجميع)');
+    alert('✅ تم نشر المقال');
 }
 
 function editBlogPost(id) {
@@ -860,7 +832,7 @@ function editBlogPost(id) {
     alert(`✏️ تعديل مقال: ${post.title}`);
 }
 
-async function updateBlogPost() {
+function updateBlogPost() {
     if (!isAdmin || !editingBlogId) return;
     const index = blogPosts.findIndex(p => p.id === editingBlogId);
     if (index === -1) return;
@@ -871,7 +843,7 @@ async function updateBlogPost() {
     blogPosts[index].tags = document.getElementById('blogTags')?.value || '';
     blogPosts[index].media = [...blogMediaList];
     
-    await saveAllData();
+    saveAllData();
     
     const updateBtn = document.querySelector('#blogForm .admin-tab[onclick="updateBlogPost()"]');
     if (updateBtn) {
@@ -888,14 +860,14 @@ async function updateBlogPost() {
     editingBlogId = null;
     
     refreshDisplay();
-    alert('✅ تم تحديث المقال (محفوظ في السحابة)');
+    alert('✅ تم تحديث المقال');
 }
 
-async function deleteBlogPost(id) {
+function deleteBlogPost(id) {
     if (!isAdmin) return;
     if (confirm('⚠️ هل أنت متأكد من حذف هذا المقال؟')) {
         blogPosts = blogPosts.filter(p => p.id !== id);
-        await saveAllData();
+        saveAllData();
         refreshDisplay();
         alert('✅ تم حذف المقال');
     }
@@ -914,10 +886,10 @@ function readFullPost(id) {
     let mediaHtml = '';
     if (post.media && post.media.length) {
         mediaHtml = '<div style="margin: 20px 0;"><h3>📸 المرفقات</h3><div class="preview-grid">';
-        post.media.forEach(m => {
+        for (let m of post.media) {
             if (m.type === 'image') mediaHtml += `<img src="${m.url}" style="width: 100%; border-radius: 10px;">`;
             else mediaHtml += `<video src="${m.url}" controls style="width: 100%; border-radius: 10px;"></video>`;
-        });
+        }
         mediaHtml += '</div></div>';
     }
     const content = `<div>${mediaHtml}<div style="background: rgba(0,255,255,0.02); padding: 20px; border-radius: 15px;">${escapeHtml(post.content || '').replace(/\n/g, '<br>')}</div></div>`;
@@ -936,7 +908,9 @@ function displayPlatformStats() {
         { id: 'pentesterlab', name: 'PentesterLab', icon: '🧪' }
     ];
     let html = '';
-    platforms.forEach(p => { html += `<div class="stat-card"><div class="stat-platform-icon">${p.icon}</div><div class="stat-platform-name">${p.name}</div><div class="stat-count">${platformStats[p.id] || 0}</div><div class="stat-label">ماكينة محلولة</div></div>`; });
+    for (let p of platforms) { 
+        html += `<div class="stat-card"><div class="stat-platform-icon">${p.icon}</div><div class="stat-platform-name">${p.name}</div><div class="stat-count">${platformStats[p.id] || 0}</div><div class="stat-label">ماكينة محلولة</div></div>`; 
+    }
     const total = Object.values(platformStats).reduce((a, b) => a + b, 0);
     html += `<div class="stat-card"><div class="stat-platform-icon">📊</div><div class="stat-platform-name">Total</div><div class="stat-count">${total}</div><div class="stat-label">إجمالي الماكينات</div></div>`;
     container.innerHTML = html;
@@ -947,17 +921,21 @@ function loadPlatformStatsEditor() {
     if (!container) return;
     const platforms = ['hackthebox', 'tryhackme', 'portswigger', 'vulnhub', 'pentesterlab'];
     let html = '';
-    platforms.forEach(p => { html += `<div class="platform-stat-editor"><span>${p}</span><input type="number" id="stat_${p}" value="${platformStats[p] || 0}" min="0"></div>`; });
+    for (let p of platforms) { 
+        html += `<div class="platform-stat-editor"><span>${p}</span><input type="number" id="stat_${p}" value="${platformStats[p] || 0}" min="0"></div>`; 
+    }
     container.innerHTML = html;
 }
 
-async function savePlatformStats() {
+function savePlatformStats() {
     if (!isAdmin) return;
     const platforms = ['hackthebox', 'tryhackme', 'portswigger', 'vulnhub', 'pentesterlab'];
-    platforms.forEach(p => { platformStats[p] = parseInt(document.getElementById(`stat_${p}`)?.value) || 0; });
-    await saveAllData();
+    for (let p of platforms) { 
+        platformStats[p] = parseInt(document.getElementById(`stat_${p}`)?.value) || 0; 
+    }
+    saveAllData();
     displayPlatformStats();
-    alert('✅ تم حفظ الإحصائيات (محفوظة في السحابة للجميع)');
+    alert('✅ تم حفظ الإحصائيات');
 }
 
 // ==================== دوال عامة ====================
@@ -976,12 +954,21 @@ function showModal(title, content) {
     document.body.style.overflow = 'hidden';
 }
 
-function openAdminModal() { document.getElementById('adminModal').classList.add('active'); }
-function closeAdminModal() { document.getElementById('adminModal').classList.remove('active'); }
-function checkEnter(e) { if (e.key === 'Enter') adminLogin(); }
+function openAdminModal() { 
+    document.getElementById('adminModal').classList.add('active'); 
+}
+
+function closeAdminModal() { 
+    document.getElementById('adminModal').classList.remove('active'); 
+}
+
+function checkEnter(e) { 
+    if (e.key === 'Enter') adminLogin(); 
+}
 
 function adminLogin() {
-    if (document.getElementById('adminPass').value === ADMIN_PASSWORD) {
+    const pass = document.getElementById('adminPass').value;
+    if (pass === ADMIN_PASSWORD) {
         isAdmin = true;
         closeAdminModal();
         document.getElementById('adminPanel').classList.add('active');
@@ -991,7 +978,10 @@ function adminLogin() {
         displayBlogPosts();
         displayMachineWriteups();
         alert('مرحباً بك أيها الأدمن!');
-    } else { alert('❌ كلمة سر خطأ'); document.getElementById('adminPass').value = ''; }
+    } else { 
+        alert('❌ كلمة سر خطأ'); 
+        document.getElementById('adminPass').value = ''; 
+    }
 }
 
 function logoutAdmin() {
@@ -1009,9 +999,18 @@ function switchAdminTab(tab) {
     if (tabs[tab]) document.getElementById(tabs[tab]).classList.add('active');
 }
 
-function toggleMenu() { document.getElementById('navLinks').classList.toggle('active'); document.querySelector('.menu-toggle').classList.toggle('active'); }
+function toggleMenu() { 
+    document.getElementById('navLinks').classList.toggle('active'); 
+    document.querySelector('.menu-toggle').classList.toggle('active'); 
+}
 
-function downloadCV() { const link = document.createElement('a'); link.href = 'E4H-CV.pdf'; link.download = 'HAMMAD_ELSAYED_CV.pdf'; link.click(); alert('✅ جاري تحميل السيرة الذاتية...'); }
+function downloadCV() { 
+    const link = document.createElement('a'); 
+    link.href = 'E4H-CV.pdf'; 
+    link.download = 'HAMMAD_ELSAYED_CV.pdf'; 
+    link.click(); 
+    alert('✅ جاري تحميل السيرة الذاتية...'); 
+}
 
 function sendEmail(e) {
     e.preventDefault();
@@ -1033,14 +1032,25 @@ function setLang(lang) {
     currentLang = lang;
     document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
     const translations = {
-        'nav-home': lang === 'ar' ? 'الرئيسية' : 'Home', 'nav-cv': lang === 'ar' ? 'السيرة' : 'CV',
-        'nav-certs': lang === 'ar' ? 'الشهادات' : 'Certifications', 'nav-projects': lang === 'ar' ? 'المشاريع' : 'Projects',
-        'nav-writeups': lang === 'ar' ? 'الرايت اب' : 'Writeups', 'nav-vuln': lang === 'ar' ? 'الثغرات' : 'Vulnerabilities',
-        'nav-blog': lang === 'ar' ? 'المدونة' : 'Blog', 'nav-contact': lang === 'ar' ? 'تواصل' : 'Contact',
-        'lang-ar': 'عربي', 'lang-en': 'English', 'admin-login': '🔑 دخول الأدمن',
-        'login-title': 'دخول الأدمن', 'login-placeholder': 'كلمة السر', 'login-button': 'تسجيل الدخول',
-        'logout': '🚪 خروج', 'cv-download': '📥 تحميل CV', 'cv-name': 'HAMMAD ELSAYED',
-        'cv-job': 'Penetration Tester', 'cv-location': lang === 'ar' ? 'مصر، الغربية' : 'Egypt, Gharbia',
+        'nav-home': lang === 'ar' ? 'الرئيسية' : 'Home', 
+        'nav-cv': lang === 'ar' ? 'السيرة' : 'CV',
+        'nav-certs': lang === 'ar' ? 'الشهادات' : 'Certifications', 
+        'nav-projects': lang === 'ar' ? 'المشاريع' : 'Projects',
+        'nav-writeups': lang === 'ar' ? 'الرايت اب' : 'Writeups', 
+        'nav-vuln': lang === 'ar' ? 'الثغرات' : 'Vulnerabilities',
+        'nav-blog': lang === 'ar' ? 'المدونة' : 'Blog', 
+        'nav-contact': lang === 'ar' ? 'تواصل' : 'Contact',
+        'lang-ar': 'عربي', 
+        'lang-en': 'English', 
+        'admin-login': '🔑 دخول الأدمن',
+        'login-title': 'دخول الأدمن', 
+        'login-placeholder': 'كلمة السر', 
+        'login-button': 'تسجيل الدخول',
+        'logout': '🚪 خروج', 
+        'cv-download': '📥 تحميل CV', 
+        'cv-name': 'HAMMAD ELSAYED',
+        'cv-job': 'Penetration Tester', 
+        'cv-location': lang === 'ar' ? 'مصر، الغربية' : 'Egypt, Gharbia',
         'cv-summary': lang === 'ar' ? 'ملخص احترافي' : 'Summary',
         'cv-summary-text': lang === 'ar' ? 'باحث أمني ومختبر اختراق، مؤسس فريق BLACK V الأمني.' : 'Cybersecurity Researcher, Founder of BLACK V Team.',
         'cv-experience': lang === 'ar' ? 'الخبرات المهنية' : 'Experience',
@@ -1049,25 +1059,40 @@ function setLang(lang) {
         'cv-edu-major': lang === 'ar' ? 'كلية الشريعة والقانون' : 'Law School',
         'cv-skills-title': lang === 'ar' ? 'المهارات التقنية' : 'Technical Skills',
         'cv-languages': lang === 'ar' ? 'اللغات' : 'Languages',
-        'lang-arabic': lang === 'ar' ? 'العربية' : 'Arabic', 'lang-native': lang === 'ar' ? 'اللغة الأم' : 'Native',
-        'lang-english': lang === 'ar' ? 'الإنجليزية' : 'English', 'lang-fluent': lang === 'ar' ? 'متوسط (B1)' : 'Intermediate (B1)',
-        'skill-web': lang === 'ar' ? 'اختبار الاختراق للويب' : 'Web Penetration', 'skill-web-desc': 'SQLi, XSS, CSRF, SSRF',
-        'skill-network': lang === 'ar' ? 'أمن الشبكات' : 'Network Security', 'skill-network-desc': 'Nmap, Metasploit, Wireshark',
-        'skill-reverse': lang === 'ar' ? 'الهندسة العكسية' : 'Reverse Engineering', 'skill-reverse-desc': 'Ghidra, IDA, x86/x64',
-        'skill-crypto': lang === 'ar' ? 'التشفير' : 'Cryptography', 'skill-crypto-desc': 'RSA, AES, Hashing',
+        'lang-arabic': lang === 'ar' ? 'العربية' : 'Arabic', 
+        'lang-native': lang === 'ar' ? 'اللغة الأم' : 'Native',
+        'lang-english': lang === 'ar' ? 'الإنجليزية' : 'English', 
+        'lang-fluent': lang === 'ar' ? 'متوسط (B1)' : 'Intermediate (B1)',
+        'skill-web': lang === 'ar' ? 'اختبار الاختراق للويب' : 'Web Penetration', 
+        'skill-web-desc': 'SQLi, XSS, CSRF, SSRF',
+        'skill-network': lang === 'ar' ? 'أمن الشبكات' : 'Network Security', 
+        'skill-network-desc': 'Nmap, Metasploit, Wireshark',
+        'skill-reverse': lang === 'ar' ? 'الهندسة العكسية' : 'Reverse Engineering', 
+        'skill-reverse-desc': 'Ghidra, IDA, x86/x64',
+        'skill-crypto': lang === 'ar' ? 'التشفير' : 'Cryptography', 
+        'skill-crypto-desc': 'RSA, AES, Hashing',
         'vuln-title': lang === 'ar' ? '┌─[TOP 10]─[أهم الثغرات]' : '┌─[TOP 10]─[Vulnerabilities]',
         'blog-title': lang === 'ar' ? '┌─[BLOG]─[مقالات تقنية]' : '┌─[BLOG]─[Articles]',
         'contact-title': lang === 'ar' ? '┌─[CONTACT]─[تواصل معي]' : '┌─[CONTACT]─[Contact]',
-        'send-message': lang === 'ar' ? 'أرسل رسالة' : 'Send Message', 'your-name': lang === 'ar' ? 'اسمك' : 'Your name',
-        'your-email': lang === 'ar' ? 'بريدك' : 'Your email', 'your-message': lang === 'ar' ? 'رسالتك' : 'Your message',
-        'send': lang === 'ar' ? 'إرسال' : 'Send', 'discord': 'Discord: zodiakx_x', 'twitter': 'Twitter: zodiakx_x',
-        'github': 'GitHub: ixZODiAK', 'footer': lang === 'ar' ? '© 2026 HAMMAD ELSAYED - مختبر اختراق' : '© 2026 HAMMAD ELSAYED - Pentester',
-        'footer-quote': '#HackThePlanet', 'hero-name': 'HAMMAD ELSAYED - Pentester',
+        'send-message': lang === 'ar' ? 'أرسل رسالة' : 'Send Message', 
+        'your-name': lang === 'ar' ? 'اسمك' : 'Your name',
+        'your-email': lang === 'ar' ? 'بريدك' : 'Your email', 
+        'your-message': lang === 'ar' ? 'رسالتك' : 'Your message',
+        'send': lang === 'ar' ? 'إرسال' : 'Send', 
+        'discord': 'Discord: zodiakx_x', 
+        'twitter': 'Twitter: zodiakx_x',
+        'github': 'GitHub: ixZODiAK', 
+        'footer': lang === 'ar' ? '© 2026 HAMMAD ELSAYED - مختبر اختراق' : '© 2026 HAMMAD ELSAYED - Pentester',
+        'footer-quote': '#HackThePlanet', 
+        'hero-name': 'HAMMAD ELSAYED - Pentester',
         'hero-command': '#!/bin/bash - "Hack The Planet"',
         'hero-desc': lang === 'ar' ? 'مختبر اختراق | OSCP | CEH | CTF Player' : 'Pentester | OSCP | CEH | CTF Player',
         'machine-writeups-title': lang === 'ar' ? '┌─[MACHINES]─[رايت اب الماكينات]' : '┌─[MACHINES]─[CTF Writeups]'
     };
-    document.querySelectorAll('[data-translate]').forEach(el => { const key = el.getAttribute('data-translate'); if (translations[key]) el.innerHTML = translations[key]; });
+    document.querySelectorAll('[data-translate]').forEach(el => { 
+        const key = el.getAttribute('data-translate'); 
+        if (translations[key]) el.innerHTML = translations[key]; 
+    });
     document.getElementById(`lang-${lang}`).classList.add('active');
 }
 
@@ -1077,9 +1102,10 @@ window.onclick = function(e) {
     if (e.target.id === 'globalModal') e.target.classList.remove('active');
 }
 
-window.onload = async function() {
+window.onload = function() {
+    console.log('🚀 بدء تشغيل الموقع...');
     setLang('ar');
-    await loadAllData();  // تحميل من السحابة أولاً
+    loadAllData();
     
     if (sessionStorage.getItem('adminLoggedIn') === 'true') {
         isAdmin = true;
@@ -1088,5 +1114,5 @@ window.onload = async function() {
         loadPlatformStatsEditor();
     }
     
-    console.log('✅ الموقع جاهز - البيانات من السحابة');
+    console.log('✅ الموقع جاهز');
 };
