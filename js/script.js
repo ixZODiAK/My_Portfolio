@@ -9,7 +9,7 @@ let editingBlogId = null;
 let stepCounter = 0;
 let blogMediaList = [];
 
-// ========== JSONBin.io Configuration ==========
+// ========== JSONBin.io Configuration (المصدر الأساسي) ==========
 const JSONBIN_CONFIG = {
     binId: '69a2f38d43b1c97be9a68c0c',
     masterKey: '$2a$10$p/Egp26o3AWMuQUWxlxbFunqeANPB7Z2mDO5h5iMKs5Y6tv9vj2Cq',
@@ -23,92 +23,137 @@ let platformStats = { hackthebox: 0, tryhackme: 0, portswigger: 0, vulnhub: 0, p
 let machineWriteups = [];
 let blogPosts = [];
 
-// ========== تحميل البيانات من localStorage (حل مؤقت سريع) ==========
-function loadAllData() {
-    console.log('📁 تحميل البيانات...');
+// ========== تحميل البيانات من السحابة (لجميع الزوار) ==========
+async function loadAllData() {
+    console.log('🔄 جاري تحميل البيانات من السحابة...');
+    showLoading(true);
     
     try {
-        const savedCerts = localStorage.getItem('pentester_certificates');
-        const savedProjects = localStorage.getItem('pentester_projects');
-        const savedStats = localStorage.getItem('pentester_platform_stats');
-        const savedMachines = localStorage.getItem('pentester_machine_writeups');
-        const savedBlogs = localStorage.getItem('pentester_blog_posts');
+        const response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_CONFIG.binId}/latest`, {
+            method: 'GET',
+            headers: {
+                'X-Master-Key': JSONBIN_CONFIG.masterKey,
+                'X-Access-Key': JSONBIN_CONFIG.accessKey
+            }
+        });
         
-        certificates = savedCerts ? JSON.parse(savedCerts) : [];
-        projects = savedProjects ? JSON.parse(savedProjects) : [];
-        platformStats = savedStats ? JSON.parse(savedStats) : { hackthebox: 0, tryhackme: 0, portswigger: 0, vulnhub: 0, pentesterlab: 0 };
-        machineWriteups = savedMachines ? JSON.parse(savedMachines) : [];
-        blogPosts = savedBlogs ? JSON.parse(savedBlogs) : [];
-        
-        // بيانات تجريبية لو مفيش حاجة
-        if (certificates.length === 0) {
-            certificates = [
-                { id: 1, name: "OSCP", issuer: "Offensive Security", date: "2024", link: "https://www.offsec.com", desc: "شهادة OSCP المهنية", skills: "Linux,Windows", imageData: "" },
-                { id: 2, name: "CEH Master", issuer: "EC-Council", date: "2024", link: "https://www.eccouncil.org", desc: "شهادة الهاكر الأخلاقي", skills: "Network,Security", imageData: "" }
-            ];
-            localStorage.setItem('pentester_certificates', JSON.stringify(certificates));
+        if (response.ok) {
+            const data = await response.json();
+            
+            if (data.record && data.record.certificates && data.record.certificates.length > 0) {
+                // تحميل البيانات من السحابة
+                certificates = data.record.certificates;
+                projects = data.record.projects || [];
+                platformStats = data.record.platformStats || { hackthebox: 0, tryhackme: 0, portswigger: 0, vulnhub: 0, pentesterlab: 0 };
+                machineWriteups = data.record.machineWriteups || [];
+                blogPosts = data.record.blogPosts || [];
+                console.log(`✅ تم تحميل البيانات من السحابة: ${certificates.length} شهادة, ${projects.length} مشروع`);
+            } else {
+                // أول مرة - مفيش بيانات في السحابة
+                console.log('📭 لا توجد بيانات في السحابة، جاري إنشاء بيانات تجريبية...');
+                initDefaultData();
+                await saveAllData();
+            }
+        } else {
+            console.error('❌ فشل الاتصال بالسحابة');
+            initDefaultData();
         }
-        
-        if (projects.length === 0) {
-            projects = [
-                { id: 1, name: "Vulnerable Web Lab", category: "Web Security", date: "2024", desc: "مختبر ويب ضعيف", tech: "JavaScript,Node.js", github: "https://github.com", imageData: "", status: "completed" }
-            ];
-            localStorage.setItem('pentester_projects', JSON.stringify(projects));
-        }
-        
-        if (machineWriteups.length === 0) {
-            machineWriteups = [
-                { id: 1, name: "Lame", platform: "HackTheBox", difficulty: "easy", date: "2024-01-15", desc: "اختراق Lame", tags: "Samba,Linux", commands: "nmap -sV -sC 10.10.10.3", walkthrough: "الشرح الكامل...", steps: [], likes: 42, views: 245 }
-            ];
-            localStorage.setItem('pentester_machine_writeups', JSON.stringify(machineWriteups));
-        }
-        
-        if (blogPosts.length === 0) {
-            blogPosts = [
-                { id: 100, title: "شرح ثغرة SQL Injection", platform: "Blog", date: "2024-01-20", content: "شرح كامل لثغرة SQL Injection...", tags: "SQLi,Web Security", views: 150, likes: 25, media: [] }
-            ];
-            localStorage.setItem('pentester_blog_posts', JSON.stringify(blogPosts));
-        }
-        
-        console.log('✅ تم تحميل البيانات');
-    } catch(e) {
-        console.error('❌ خطأ في التحميل:', e);
+    } catch (error) {
+        console.error('❌ خطأ في الاتصال بالسحابة:', error);
+        initDefaultData();
     }
     
-    // تحديث العرض
     refreshDisplay();
+    showLoading(false);
 }
 
-// حفظ البيانات في localStorage
-function saveAllData() {
+// بيانات تجريبية افتراضية (أول مرة)
+function initDefaultData() {
+    certificates = [
+        { id: 1, name: "OSCP", issuer: "Offensive Security", date: "2024", link: "https://www.offsec.com", desc: "شهادة OSCP المهنية - اختبار الاختراق العملي", skills: "Linux,Windows,PrivEsc", imageData: "" },
+        { id: 2, name: "CEH Master", issuer: "EC-Council", date: "2024", link: "https://www.eccouncil.org", desc: "شهادة الهاكر الأخلاقي المعتمد", skills: "Network,Security,Footprinting", imageData: "" },
+        { id: 3, name: "CRTP", issuer: "Pentester Academy", date: "2024", link: "https://www.pentesteracademy.com", desc: "شهادة اختبار اختراق Active Directory", skills: "AD,Kerberos,PrivEsc", imageData: "" }
+    ];
+    
+    projects = [
+        { id: 1, name: "Vulnerable Web Lab", category: "Web Security", date: "2024", desc: "مختبر ويب ضعيف لتعليم ثغرات OWASP Top 10", tech: "JavaScript,Node.js,Express", github: "https://github.com/ixZODiAK/vulnerable-lab", imageData: "", status: "completed", features: "15 تحدياً أمنياً\nواجهة تفاعلية\nشرح مفصل" },
+        { id: 2, name: "Auto Pentest Toolkit", category: "Automation", date: "2024", desc: "أدوات آلية لأتمتة اختبارات الاختراق", tech: "Python,Bash,Nmap,Metasploit", github: "https://github.com/ixZODiAK/auto-pentest", imageData: "", status: "in-progress", features: "جمع معلومات تلقائي\nفحص ثغرات\nتوليد تقارير PDF" }
+    ];
+    
+    platformStats = { hackthebox: 45, tryhackme: 62, portswigger: 38, vulnhub: 25, pentesterlab: 20 };
+    
+    machineWriteups = [
+        { id: 1, name: "Lame", platform: "HackTheBox", difficulty: "easy", date: "2024-01-15", desc: "اختراق جهاز Lame باستخدام ثغرة Samba", tags: "Samba,Linux,CVE-2007-2447", commands: "nmap -sV -sC 10.10.10.3\nsearchsploit samba 3.0.20\nmsfconsole -q -x 'use exploit/multi/samba/usermap_script; set RHOST 10.10.10.3; exploit'", walkthrough: "الشرح الكامل لاختراق جهاز Lame...", steps: [], likes: 42, views: 245 },
+        { id: 2, name: "Blue", platform: "HackTheBox", difficulty: "easy", date: "2024-01-10", desc: "اختراق جهاز Blue باستخدام ثغرة EternalBlue", tags: "Windows,EternalBlue,MS17-010", commands: "nmap -p445 --script smb-vuln-ms17-010 10.10.10.40\nmsfconsole -q -x 'use exploit/windows/smb/ms17_010_eternalblue; set RHOST 10.10.10.40; exploit'", walkthrough: "الشرح الكامل لاختراق Blue...", steps: [], likes: 67, views: 412 }
+    ];
+    
+    blogPosts = [
+        { id: 100, title: "شرح ثغرة SQL Injection", platform: "Blog", date: "2024-01-20", content: "شرح كامل لثغرة SQL Injection وكيفية استغلالها والوقاية منها...", tags: "SQLi,Web Security", views: 150, likes: 25, media: [] }
+    ];
+}
+
+// ========== حفظ البيانات في السحابة ==========
+async function saveAllData() {
+    console.log('💾 جاري حفظ البيانات في السحابة...');
+    showLoading(true);
+    
     try {
-        localStorage.setItem('pentester_certificates', JSON.stringify(certificates));
-        localStorage.setItem('pentester_projects', JSON.stringify(projects));
-        localStorage.setItem('pentester_platform_stats', JSON.stringify(platformStats));
-        localStorage.setItem('pentester_machine_writeups', JSON.stringify(machineWriteups));
-        localStorage.setItem('pentester_blog_posts', JSON.stringify(blogPosts));
-        console.log('✅ تم حفظ البيانات');
+        const allData = {
+            certificates: certificates,
+            projects: projects,
+            platformStats: platformStats,
+            machineWriteups: machineWriteups,
+            blogPosts: blogPosts,
+            lastUpdated: new Date().toISOString(),
+            updatedBy: isAdmin ? 'Admin' : 'System'
+        };
         
-        // محاولة حفظ في السحابة (خلفية)
-        saveToCloudAsync();
-        return true;
-    } catch(e) {
-        console.error('❌ فشل الحفظ:', e);
-        return false;
-    }
-}
-
-// حفظ في السحابة (خلفية - مش هتأثر على الأداء)
-async function saveToCloudAsync() {
-    try {
-        const allData = { certificates, projects, platformStats, machineWriteups, blogPosts, lastUpdated: new Date().toISOString() };
-        await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_CONFIG.binId}`, {
+        const response = await fetch(`https://api.jsonbin.io/v3/b/${JSONBIN_CONFIG.binId}`, {
             method: 'PUT',
-            headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_CONFIG.masterKey, 'X-Access-Key': JSONBIN_CONFIG.accessKey },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Master-Key': JSONBIN_CONFIG.masterKey,
+                'X-Access-Key': JSONBIN_CONFIG.accessKey
+            },
             body: JSON.stringify(allData)
         });
-        console.log('✅ تم الحفظ في السحابة');
-    } catch(e) { console.log('⚠️ فشل الحفظ في السحابة'); }
+        
+        if (response.ok) {
+            console.log('✅ تم حفظ البيانات في السحابة بنجاح');
+            // حفظ نسخة في localStorage كاحتياطي سريع
+            saveToLocalStorage();
+            alert('✅ تم الحفظ في السحابة بنجاح!');
+        } else {
+            throw new Error(`HTTP ${response.status}`);
+        }
+    } catch (error) {
+        console.error('❌ فشل الحفظ في السحابة:', error);
+        alert('⚠️ فشل الاتصال بالسحابة، سيتم المحاولة مرة أخرى');
+        saveToLocalStorage();
+    } finally {
+        showLoading(false);
+    }
+}
+
+// حفظ في localStorage (نسخة احتياطية سريعة)
+function saveToLocalStorage() {
+    localStorage.setItem('pentester_certificates', JSON.stringify(certificates));
+    localStorage.setItem('pentester_projects', JSON.stringify(projects));
+    localStorage.setItem('pentester_platform_stats', JSON.stringify(platformStats));
+    localStorage.setItem('pentester_machine_writeups', JSON.stringify(machineWriteups));
+    localStorage.setItem('pentester_blog_posts', JSON.stringify(blogPosts));
+}
+
+// ========== مؤشر تحميل ==========
+function showLoading(show) {
+    let loader = document.getElementById('loadingIndicator');
+    if (!loader && show) {
+        loader = document.createElement('div');
+        loader.id = 'loadingIndicator';
+        loader.innerHTML = `<div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--bg-secondary); padding: 20px 40px; border-radius: 15px; border: 2px solid var(--accent-cyan); z-index: 10001; font-family: monospace;">⏳ جاري التحميل...</div>`;
+        document.body.appendChild(loader);
+    }
+    if (loader) loader.style.display = show ? 'flex' : 'none';
 }
 
 // تحديث واجهة العرض
@@ -192,7 +237,7 @@ function displayCertificatesPublic() {
     container.innerHTML = html;
 }
 
-function addCertificate() {
+async function addCertificate() {
     if (!isAdmin) { alert('❌ يجب تسجيل الدخول كأدمن'); return; }
     
     const name = document.getElementById('certName')?.value;
@@ -216,7 +261,7 @@ function addCertificate() {
         imageData: imageData || '' 
     };
     certificates.push(newCert);
-    saveAllData();
+    await saveAllData();
     
     document.getElementById('certName').value = '';
     document.getElementById('certIssuer').value = '';
@@ -229,7 +274,6 @@ function addCertificate() {
     document.getElementById('certImageInput').value = '';
     
     refreshDisplay();
-    alert('✅ تم إضافة الشهادة');
 }
 
 function editCertificate(id) {
@@ -257,7 +301,7 @@ function editCertificate(id) {
     alert(`✏️ تعديل شهادة: ${cert.name}`);
 }
 
-function updateCertificate() {
+async function updateCertificate() {
     if (!isAdmin || !editingCertId) return;
     const index = certificates.findIndex(c => c.id === editingCertId);
     if (index === -1) return;
@@ -270,7 +314,7 @@ function updateCertificate() {
     certificates[index].skills = document.getElementById('certSkills')?.value || '';
     certificates[index].imageData = document.getElementById('certImageData')?.value || '';
     
-    saveAllData();
+    await saveAllData();
     
     const updateBtn = document.querySelector('#certsForm .admin-tab[onclick="updateCertificate()"]');
     if (updateBtn) {
@@ -291,16 +335,16 @@ function updateCertificate() {
     
     editingCertId = null;
     refreshDisplay();
-    alert('✅ تم تحديث الشهادة');
+    alert('✅ تم تحديث الشهادة في السحابة');
 }
 
-function deleteCertificate(id) {
+async function deleteCertificate(id) {
     if (!isAdmin) return;
     if (confirm('⚠️ هل أنت متأكد من حذف هذه الشهادة؟')) {
         certificates = certificates.filter(c => c.id !== id);
-        saveAllData();
+        await saveAllData();
         refreshDisplay();
-        alert('✅ تم حذف الشهادة');
+        alert('✅ تم حذف الشهادة من السحابة');
     }
 }
 
@@ -352,7 +396,7 @@ function displayProjectsPublic() {
     container.innerHTML = html;
 }
 
-function addProject() {
+async function addProject() {
     if (!isAdmin) { alert('❌ يجب تسجيل الدخول كأدمن'); return; }
     
     const name = document.getElementById('projectName')?.value;
@@ -380,7 +424,7 @@ function addProject() {
         imageData: imageData || '' 
     };
     projects.push(newProject);
-    saveAllData();
+    await saveAllData();
     
     document.getElementById('projectName').value = '';
     document.getElementById('projectCategory').value = '';
@@ -394,7 +438,6 @@ function addProject() {
     document.getElementById('projectImageInput').value = '';
     
     refreshDisplay();
-    alert('✅ تم إضافة المشروع');
 }
 
 function editProject(id) {
@@ -424,7 +467,7 @@ function editProject(id) {
     alert(`✏️ تعديل مشروع: ${project.name}`);
 }
 
-function updateProject() {
+async function updateProject() {
     if (!isAdmin || !editingProjectId) return;
     const index = projects.findIndex(p => p.id === editingProjectId);
     if (index === -1) return;
@@ -439,7 +482,7 @@ function updateProject() {
     projects[index].features = document.getElementById('projectFeatures')?.value || '';
     projects[index].imageData = document.getElementById('projectImageData')?.value || '';
     
-    saveAllData();
+    await saveAllData();
     
     const updateBtn = document.querySelector('#projectsForm .admin-tab[onclick="updateProject()"]');
     if (updateBtn) {
@@ -461,20 +504,20 @@ function updateProject() {
     
     editingProjectId = null;
     refreshDisplay();
-    alert('✅ تم تحديث المشروع');
+    alert('✅ تم تحديث المشروع في السحابة');
 }
 
-function deleteProject(id) {
+async function deleteProject(id) {
     if (!isAdmin) return;
     if (confirm('⚠️ هل أنت متأكد من حذف هذا المشروع؟')) {
         projects = projects.filter(p => p.id !== id);
-        saveAllData();
+        await saveAllData();
         refreshDisplay();
-        alert('✅ تم حذف المشروع');
+        alert('✅ تم حذف المشروع من السحابة');
     }
 }
 
-// ==================== إدارة رايت اب الماكينات ====================
+// ==================== إدارة رايت اب الماكينات (مختصرة للحفاظ على المساحة) ====================
 function addStepField() {
     const container = document.getElementById('stepsContainer');
     if (!container) return;
@@ -539,7 +582,7 @@ function displayMachineWriteups() {
     container.innerHTML = html;
 }
 
-function addMachineWriteup() {
+async function addMachineWriteup() {
     if (!isAdmin) { alert('❌ يجب تسجيل الدخول كأدمن'); return; }
     
     const name = document.getElementById('machineName')?.value;
@@ -577,7 +620,7 @@ function addMachineWriteup() {
         views: 0 
     };
     machineWriteups.push(newMachine);
-    saveAllData();
+    await saveAllData();
     
     document.getElementById('machineName').value = '';
     document.getElementById('machineDesc').value = '';
@@ -588,7 +631,6 @@ function addMachineWriteup() {
     stepCounter = 0;
     
     refreshDisplay();
-    alert('✅ تم إضافة رايت اب');
 }
 
 function editMachineWriteup(id) {
@@ -640,7 +682,7 @@ function editMachineWriteup(id) {
     alert(`✏️ تعديل رايت اب: ${machine.name}`);
 }
 
-function updateMachineWriteup() {
+async function updateMachineWriteup() {
     if (!isAdmin || !editingMachineId) return;
     const index = machineWriteups.findIndex(m => m.id === editingMachineId);
     if (index === -1) return;
@@ -667,7 +709,7 @@ function updateMachineWriteup() {
         steps: steps
     };
     
-    saveAllData();
+    await saveAllData();
     
     const updateBtn = document.querySelector('#machinesForm .admin-tab[onclick="updateMachineWriteup()"]');
     if (updateBtn) {
@@ -686,16 +728,16 @@ function updateMachineWriteup() {
     editingMachineId = null;
     
     refreshDisplay();
-    alert('✅ تم تحديث رايت اب');
+    alert('✅ تم تحديث رايت اب في السحابة');
 }
 
-function deleteMachineWriteup(id) {
+async function deleteMachineWriteup(id) {
     if (!isAdmin) return;
     if (confirm('⚠️ هل أنت متأكد من حذف هذا الرايت اب؟')) {
         machineWriteups = machineWriteups.filter(m => m.id !== id);
-        saveAllData();
+        await saveAllData();
         refreshDisplay();
-        alert('✅ تم حذف الرايت اب');
+        alert('✅ تم حذف الرايت اب من السحابة');
     }
 }
 
@@ -783,7 +825,7 @@ function displayBlogPosts() {
     container.innerHTML = html;
 }
 
-function addBlogPost() {
+async function addBlogPost() {
     if (!isAdmin) { alert('❌ يجب تسجيل الدخول كأدمن'); return; }
     const title = document.getElementById('blogTitle')?.value;
     const platform = document.getElementById('blogPlatform')?.value;
@@ -802,14 +844,13 @@ function addBlogPost() {
         media: [...blogMediaList] 
     };
     blogPosts.push(newPost);
-    saveAllData();
+    await saveAllData();
     document.getElementById('blogTitle').value = '';
     document.getElementById('blogContent').value = '';
     document.getElementById('blogTags').value = '';
     blogMediaList = [];
     displayBlogMediaPreview();
     refreshDisplay();
-    alert('✅ تم نشر المقال');
 }
 
 function editBlogPost(id) {
@@ -832,7 +873,7 @@ function editBlogPost(id) {
     alert(`✏️ تعديل مقال: ${post.title}`);
 }
 
-function updateBlogPost() {
+async function updateBlogPost() {
     if (!isAdmin || !editingBlogId) return;
     const index = blogPosts.findIndex(p => p.id === editingBlogId);
     if (index === -1) return;
@@ -843,7 +884,7 @@ function updateBlogPost() {
     blogPosts[index].tags = document.getElementById('blogTags')?.value || '';
     blogPosts[index].media = [...blogMediaList];
     
-    saveAllData();
+    await saveAllData();
     
     const updateBtn = document.querySelector('#blogForm .admin-tab[onclick="updateBlogPost()"]');
     if (updateBtn) {
@@ -860,16 +901,16 @@ function updateBlogPost() {
     editingBlogId = null;
     
     refreshDisplay();
-    alert('✅ تم تحديث المقال');
+    alert('✅ تم تحديث المقال في السحابة');
 }
 
-function deleteBlogPost(id) {
+async function deleteBlogPost(id) {
     if (!isAdmin) return;
     if (confirm('⚠️ هل أنت متأكد من حذف هذا المقال؟')) {
         blogPosts = blogPosts.filter(p => p.id !== id);
-        saveAllData();
+        await saveAllData();
         refreshDisplay();
-        alert('✅ تم حذف المقال');
+        alert('✅ تم حذف المقال من السحابة');
     }
 }
 
@@ -927,15 +968,15 @@ function loadPlatformStatsEditor() {
     container.innerHTML = html;
 }
 
-function savePlatformStats() {
+async function savePlatformStats() {
     if (!isAdmin) return;
     const platforms = ['hackthebox', 'tryhackme', 'portswigger', 'vulnhub', 'pentesterlab'];
     for (let p of platforms) { 
         platformStats[p] = parseInt(document.getElementById(`stat_${p}`)?.value) || 0; 
     }
-    saveAllData();
+    await saveAllData();
     displayPlatformStats();
-    alert('✅ تم حفظ الإحصائيات');
+    alert('✅ تم حفظ الإحصائيات في السحابة');
 }
 
 // ==================== دوال عامة ====================
@@ -1102,10 +1143,10 @@ window.onclick = function(e) {
     if (e.target.id === 'globalModal') e.target.classList.remove('active');
 }
 
-window.onload = function() {
+window.onload = async function() {
     console.log('🚀 بدء تشغيل الموقع...');
     setLang('ar');
-    loadAllData();
+    await loadAllData();  // تحميل من السحابة أولاً
     
     if (sessionStorage.getItem('adminLoggedIn') === 'true') {
         isAdmin = true;
@@ -1114,5 +1155,5 @@ window.onload = function() {
         loadPlatformStatsEditor();
     }
     
-    console.log('✅ الموقع جاهز');
+    console.log('✅ الموقع جاهز - البيانات من السحابة');
 };
